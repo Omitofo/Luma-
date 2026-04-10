@@ -1,4 +1,4 @@
-import { Message } from "../App";
+import { Message } from "../../types/chat";
 
 interface Props {
   messages: Message[];

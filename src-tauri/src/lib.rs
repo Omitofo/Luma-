@@ -1,10 +1,10 @@
-mod tutor;
-
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::json;
 use std::io::{BufRead, BufReader};
 use tauri::Emitter;
+
+mod tutor;
 
 #[derive(Deserialize)]
 pub struct ChatMessage {
@@ -12,15 +12,30 @@ pub struct ChatMessage {
     content: String,
 }
 
+#[derive(Deserialize)]
+pub struct LearnerProfile {
+    language: String,
+    level: String,
+}
+
 #[tauri::command]
 fn chat(
     app: tauri::AppHandle,
     messages: Vec<ChatMessage>,
     tutor_mode: String,
+    learner_profile: LearnerProfile, // ✅ ADD THIS
 ) {
     let client = Client::new();
 
-    let system_prompt = tutor::get_prompt(&tutor_mode);
+    // 👇 ENHANCED SYSTEM PROMPT (minimal injection, no architecture break)
+    let base_prompt = tutor::get_prompt(&tutor_mode);
+
+    let system_prompt = format!(
+        "{}\nLanguage: {}\nLevel: {}",
+        base_prompt,
+        learner_profile.language,
+        learner_profile.level
+    );
 
     let mut prompt = format!(
         "<|im_start|>system\n{}<|im_end|>\n",
@@ -75,7 +90,6 @@ fn chat(
                 {
                     if let Some(token) = data["content"].as_str() {
                         full_response.push_str(token);
-
                         let _ = app.emit("token", token);
                     }
                 }
