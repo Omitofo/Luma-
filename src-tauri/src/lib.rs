@@ -1,6 +1,8 @@
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::json;
+use std::io::{BufRead, BufReader};
+use tauri::Emitter;
 
 #[derive(Deserialize)]
 pub struct ChatMessage {
@@ -9,26 +11,28 @@ pub struct ChatMessage {
 }
 
 #[tauri::command]
-fn chat(messages: Vec<ChatMessage>) -> String {
+fn chat(app: tauri::AppHandle, messages: Vec<ChatMessage>) {
     let client = Client::new();
 
-let mut prompt = String::from("<|im_start|>system\nYou are Luma, a helpful language tutor.<|im_end|>\n");
-  
-   for msg in messages {
-    if msg.role == "user" {
-        prompt.push_str(&format!(
-            "<|im_start|>user\n{}<|im_end|>\n",
-            msg.content
-        ));
-    } else {
-        prompt.push_str(&format!(
-            "<|im_start|>assistant\n{}<|im_end|>\n",
-            msg.content
-        ));
-    }
-}
+    let mut prompt = String::from(
+        "<|im_start|>system\nYou are Luma, a helpful language tutor.<|im_end|>\n",
+    );
 
-prompt.push_str("<|im_start|>assistant\n");
+    for msg in messages {
+        if msg.role == "user" {
+            prompt.push_str(&format!(
+                "<|im_start|>user\n{}<|im_end|>\n",
+                msg.content
+            ));
+        } else {
+            prompt.push_str(&format!(
+                "<|im_start|>assistant\n{}<|im_end|>\n",
+                msg.content
+            ));
+        }
+    }
+
+    prompt.push_str("<|im_start|>assistant\n");
 
     let res = client
         .post("http://localhost:8080/completion")
@@ -36,27 +40,45 @@ prompt.push_str("<|im_start|>assistant\n");
             "prompt": prompt,
             "n_predict": 200,
             "temperature": 0.7,
-            "stop": ["<|im_end|>"]
-
+            "stop": ["<|im_end|>"],
+            "stream": true
         }))
         .send();
 
-    match res {
-        Ok(response) => {
-            let text = response.text().unwrap_or_default();
+match res {
+    Ok(response) => {
+        let reader = BufReader::new(response);
+        let mut full_response = String::new();
 
-            let json: serde_json::Value =
-                serde_json::from_str(&text).unwrap_or_default();
+        for line in reader.lines().flatten() {
+            if !line.starts_with("data: ") {
+                continue;
+            }
 
-            json["content"]
-                .as_str()
-                .unwrap_or("No response from model")
-                .to_string()
+            let json_part = line.trim_start_matches("data: ").trim();
+
+            if json_part == "[DONE]" {
+                break;
+            }
+
+            if let Ok(data) =
+                serde_json::from_str::<serde_json::Value>(json_part)
+            {
+                if let Some(token) = data["content"].as_str() {
+                    full_response.push_str(token);
+
+                    let _ = app.emit("token", token);
+                }
+            }
         }
-        Err(e) => {
-            format!("Request error: {}", e)
-        }
+
+        let _ = app.emit("token_end", full_response);
     }
+
+    Err(e) => {
+        let _ = app.emit("token_end", format!("Error: {}", e));
+    }
+}
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

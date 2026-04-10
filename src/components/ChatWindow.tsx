@@ -2,9 +2,10 @@ import { Message } from "../App";
 
 interface Props {
   messages: Message[];
+  streaming: string;
 }
 
-export default function ChatWindow({ messages }: Props) {
+export default function ChatWindow({ messages, streaming }: Props) {
   return (
     <div className="chat-window">
       {messages.map((msg, i) => (
@@ -15,6 +16,14 @@ export default function ChatWindow({ messages }: Props) {
           </div>
         </div>
       ))}
+
+      {streaming && (
+        <div className="message-row assistant">
+          <div className="bubble assistant">
+            🤖 {streaming}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
