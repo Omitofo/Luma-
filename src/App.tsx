@@ -16,6 +16,10 @@ function App() {
   const [streaming, setStreaming] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [tutorMode, setTutorMode] = useState<"casual" | "academic">(
+    "casual"
+  );
+
   async function sendMessage(input: string) {
     if (!input.trim() || loading) return;
 
@@ -51,6 +55,7 @@ function App() {
     try {
       await invoke("chat", {
         messages: updatedMessages,
+        tutorMode,
       });
     } catch (err) {
       setMessages((prev) => [
@@ -73,9 +78,32 @@ function App() {
     <main className="container">
       <h1>Luma</h1>
 
-      <ChatWindow messages={messages} streaming={streaming} />
+      <select
+        value={tutorMode}
+        onChange={(e) =>
+          setTutorMode(
+            e.target.value as "casual" | "academic"
+          )
+        }
+      >
+        <option value="casual">
+          Casual Conversation Tutor
+        </option>
 
-      <ChatInput onSend={sendMessage} loading={loading} />
+        <option value="academic">
+          Structured Academic Tutor
+        </option>
+      </select>
+
+      <ChatWindow
+        messages={messages}
+        streaming={streaming}
+      />
+
+      <ChatInput
+        onSend={sendMessage}
+        loading={loading}
+      />
     </main>
   );
 }

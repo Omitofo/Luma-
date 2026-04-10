@@ -1,3 +1,5 @@
+mod tutor;
+
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::json;
@@ -11,11 +13,18 @@ pub struct ChatMessage {
 }
 
 #[tauri::command]
-fn chat(app: tauri::AppHandle, messages: Vec<ChatMessage>) {
+fn chat(
+    app: tauri::AppHandle,
+    messages: Vec<ChatMessage>,
+    tutor_mode: String,
+) {
     let client = Client::new();
 
-    let mut prompt = String::from(
-        "<|im_start|>system\nYou are Luma, a helpful language tutor.<|im_end|>\n",
+    let system_prompt = tutor::get_prompt(&tutor_mode);
+
+    let mut prompt = format!(
+        "<|im_start|>system\n{}<|im_end|>\n",
+        system_prompt
     );
 
     for msg in messages {
@@ -45,40 +54,40 @@ fn chat(app: tauri::AppHandle, messages: Vec<ChatMessage>) {
         }))
         .send();
 
-match res {
-    Ok(response) => {
-        let reader = BufReader::new(response);
-        let mut full_response = String::new();
+    match res {
+        Ok(response) => {
+            let reader = BufReader::new(response);
+            let mut full_response = String::new();
 
-        for line in reader.lines().flatten() {
-            if !line.starts_with("data: ") {
-                continue;
-            }
+            for line in reader.lines().flatten() {
+                if !line.starts_with("data: ") {
+                    continue;
+                }
 
-            let json_part = line.trim_start_matches("data: ").trim();
+                let json_part = line.trim_start_matches("data: ").trim();
 
-            if json_part == "[DONE]" {
-                break;
-            }
+                if json_part == "[DONE]" {
+                    break;
+                }
 
-            if let Ok(data) =
-                serde_json::from_str::<serde_json::Value>(json_part)
-            {
-                if let Some(token) = data["content"].as_str() {
-                    full_response.push_str(token);
+                if let Ok(data) =
+                    serde_json::from_str::<serde_json::Value>(json_part)
+                {
+                    if let Some(token) = data["content"].as_str() {
+                        full_response.push_str(token);
 
-                    let _ = app.emit("token", token);
+                        let _ = app.emit("token", token);
+                    }
                 }
             }
+
+            let _ = app.emit("token_end", full_response);
         }
 
-        let _ = app.emit("token_end", full_response);
+        Err(e) => {
+            let _ = app.emit("token_end", format!("Error: {}", e));
+        }
     }
-
-    Err(e) => {
-        let _ = app.emit("token_end", format!("Error: {}", e));
-    }
-}
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
