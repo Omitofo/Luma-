@@ -1,31 +1,36 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import ChatWindow from "./components/ChatWindow";
+import ChatInput from "./components/ChatInput";
 import "./App.css";
 
+export interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 function App() {
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
-  async function sendMessage() {
+  async function sendMessage(input: string) {
     if (!input.trim()) return;
 
-    const userMsg = input;
-    setInput("");
-
-    // add user message immediately
-    setMessages((prev) => [...prev, "you: " + userMsg]);
-
+    setMessages((prev) => [...prev, { role: "user", content: input }]);
     setLoading(true);
 
     try {
-      const res = await invoke<string>("chat", {
-        message: userMsg,
-      });
+      const res = await invoke<string>("chat", { message: input });
 
-      setMessages((prev) => [...prev, "luma: " + res]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: res },
+      ]);
     } catch (err) {
-      setMessages((prev) => [...prev, "error: " + String(err)]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Error: " + String(err) },
+      ]);
     }
 
     setLoading(false);
@@ -35,28 +40,9 @@ function App() {
     <main className="container">
       <h1>Luma</h1>
 
-      {/* Chat window */}
-      <div style={{ height: 300, overflowY: "auto", border: "1px solid #333", padding: 10 }}>
-        {messages.map((m, i) => (
-          <div key={i}>{m}</div>
-        ))}
-      </div>
+      <ChatWindow messages={messages} />
 
-      {/* Input */}
-      <div className="row" style={{ marginTop: 10 }}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.currentTarget.value)}
-          placeholder="Talk to Luma..."
-          onKeyDown={(e) => {
-            if (e.key === "Enter") sendMessage();
-          }}
-        />
-
-        <button onClick={sendMessage} disabled={loading}>
-          {loading ? "Thinking..." : "Send"}
-        </button>
-      </div>
+      <ChatInput onSend={sendMessage} loading={loading} />
     </main>
   );
 }
