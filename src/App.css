@@ -72,7 +72,7 @@ h1 {
   display: flex;
   gap: 12px;
   margin-top: 16px;
-
+  padding-right: 20px;
   flex-shrink: 0;
 }
 
