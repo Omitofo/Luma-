@@ -2,8 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
-// @ts-ignore
-const host = process.env.TAURI_DEV_HOST;
+const host = (process as any).env?.TAURI_DEV_HOST;
 
 export default defineConfig({
   plugins: [react()],

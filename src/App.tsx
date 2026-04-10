@@ -7,10 +7,8 @@ import ChatInput from "./components/chat/ChatInput";
 import Onboarding from "./components/Onboarding";
 import Settings from "./components/Settings";
 
-import { Message } from "./types/chat";
-import { LearnerProfile, TutorMode } from "./types/tutor";
-
-import "./App.css";
+import type { Message } from "./types/chat";
+import type { LearnerProfile, TutorMode } from "./types/tutor";
 
 type AppState = "onboarding" | "chat";
 
@@ -26,17 +24,19 @@ function App() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  async function startSession(data: LearnerProfile, mode: TutorMode) {
+  function startSession(data: LearnerProfile) {
     setProfile(data);
-    setTutorMode(mode);
+    setMessages([]);
+    setStreaming("");
     setState("chat");
   }
 
-  async function resetSession() {
+  function resetSession() {
     setMessages([]);
     setStreaming("");
     setProfile(null);
     setState("onboarding");
+    setSettingsOpen(false);
   }
 
   async function sendMessage(input: string) {
@@ -85,51 +85,35 @@ function App() {
     }
   }
 
-  // ======================
-  // ONBOARDING SCREEN
-  // ======================
   if (state === "onboarding") {
-    return (
-      <Onboarding
-        onStart={startSession}
-      />
-    );
+    return <Onboarding onComplete={startSession} />;
   }
 
-  // ======================
-  // CHAT SCREEN
-  // ======================
   return (
-    <main className="container">
-      {/* HEADER */}
-      <div className="top-bar">
-        <h1>Luma</h1>
+    <main className="h-screen flex flex-col">
+      {/* TOP BAR */}
+      <div className="flex justify-between items-center p-3 border-b">
+        <h1 className="font-bold">Luma</h1>
 
-        <button
-          className="settings-btn"
-          onClick={() => setSettingsOpen(true)}
-        >
+        <button onClick={() => setSettingsOpen(true)}>
           ⚙️
         </button>
       </div>
 
-      <ChatWindow
-        messages={messages}
-        streaming={streaming}
-      />
+      <div className="flex-1 overflow-hidden">
+        <ChatWindow messages={messages} streaming={streaming} />
+      </div>
 
-      <ChatInput
-        onSend={sendMessage}
-        loading={loading}
-      />
+      <ChatInput onSend={sendMessage} loading={loading} />
 
       {settingsOpen && (
         <Settings
-          tutorMode={tutorMode}
-          setTutorMode={setTutorMode}
-          onClose={() => setSettingsOpen(false)}
-          onReset={resetSession}
-        />
+  open={settingsOpen}
+  tutorMode={tutorMode}
+  setTutorMode={setTutorMode}
+  onClose={() => setSettingsOpen(false)}
+  onReset={resetSession}
+/>
       )}
     </main>
   );

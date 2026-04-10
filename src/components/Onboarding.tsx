@@ -1,46 +1,107 @@
 import { useState } from "react";
-import { LearnerProfile, TutorMode } from "../types/tutor";
 
-interface Props {
-  onStart: (profile: LearnerProfile, mode: TutorMode) => void;
-}
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
-export default function Onboarding({ onStart }: Props) {
+import type { LearnerProfile } from "../types/tutor";
+
+type Props = {
+  onComplete: (profile: LearnerProfile) => void;
+};
+
+export default function Onboarding({ onComplete }: Props) {
   const [language, setLanguage] = useState("");
   const [level, setLevel] = useState("");
-  const [mode, setMode] = useState<TutorMode>("casual");
+  const [focus, setFocus] = useState("");
+
+  const isValid = language.length > 0 && level.length > 0;
+
+  function handleStart() {
+    if (!isValid) return;
+
+    onComplete({
+      language,
+      level,
+      focus: focus || undefined,
+    });
+  }
 
   return (
-    <div className="onboarding">
-      <h1>Welcome to Luma</h1>
+    <div className="h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Start learning</CardTitle>
+        </CardHeader>
 
-      <input
-        placeholder="Language (e.g. Japanese)"
-        value={language}
-        onChange={(e) => setLanguage(e.target.value)}
-      />
+        <CardContent className="space-y-5">
+          {/* LANGUAGE */}
+          <div className="space-y-2">
+            <Label>Language</Label>
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
 
-      <input
-        placeholder="Level (e.g. N5 / A1)"
-        value={level}
-        onChange={(e) => setLevel(e.target.value)}
-      />
+              <SelectContent>
+                <SelectItem value="english">English</SelectItem>
+                <SelectItem value="spanish">Spanish</SelectItem>
+                <SelectItem value="french">French</SelectItem>
+                <SelectItem value="german">German</SelectItem>
+                <SelectItem value="italian">Italian</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      <select
-        value={mode}
-        onChange={(e) => setMode(e.target.value as TutorMode)}
-      >
-        <option value="casual">Casual Tutor</option>
-        <option value="academic">Academic Tutor</option>
-      </select>
+          {/* LEVEL */}
+          <div className="space-y-2">
+            <Label>Level</Label>
+            <Select value={level} onValueChange={setLevel}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select level" />
+              </SelectTrigger>
 
-      <button
-        onClick={() =>
-          onStart({ language, level }, mode)
-        }
-      >
-        Start Learning
-      </button>
+              <SelectContent>
+                <SelectItem value="A1">A1 - Beginner</SelectItem>
+                <SelectItem value="A2">A2 - Elementary</SelectItem>
+                <SelectItem value="B1">B1 - Intermediate</SelectItem>
+                <SelectItem value="B2">B2 - Upper intermediate</SelectItem>
+                <SelectItem value="C1">C1 - Advanced</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* FOCUS (optional but recommended) */}
+          <div className="space-y-2">
+            <Label>
+              Focus <span className="text-muted-foreground">(optional)</span>
+            </Label>
+
+            <Input
+              value={focus}
+              onChange={(e) => setFocus(e.target.value)}
+              placeholder="e.g. conversation, grammar, travel, exam prep"
+            />
+          </div>
+
+          {/* BUTTON */}
+          <Button
+            className="w-full"
+            onClick={handleStart}
+            disabled={!isValid}
+          >
+            Start learning
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

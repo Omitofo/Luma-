@@ -1,6 +1,24 @@
-import { TutorMode } from "../types/tutor";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+
+import { Button } from "./ui/button";
+import { Label } from "./ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+
+import type { TutorMode } from "../types/tutor";
 
 interface Props {
+  open: boolean;
   tutorMode: TutorMode;
   setTutorMode: (mode: TutorMode) => void;
   onClose: () => void;
@@ -8,37 +26,48 @@ interface Props {
 }
 
 export default function Settings({
+  open,
   tutorMode,
   setTutorMode,
   onClose,
   onReset,
 }: Props) {
   return (
-    <div className="settings-overlay">
-      <div className="settings-panel">
-        <h2>Settings</h2>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Settings</DialogTitle>
+        </DialogHeader>
 
-        <label>Tutor Mode</label>
-        <select
-          value={tutorMode}
-          onChange={(e) =>
-            setTutorMode(e.target.value as TutorMode)
-          }
-        >
-          <option value="casual">Casual</option>
-          <option value="academic">Academic</option>
-        </select>
+        <div className="space-y-4">
+          {/* TUTOR MODE */}
+          <div className="space-y-2">
+            <Label>Tutor Mode</Label>
 
-        <hr />
+            <Select value={tutorMode} onValueChange={setTutorMode}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select mode" />
+              </SelectTrigger>
 
-        <button onClick={onReset}>
-          End Chat
-        </button>
+              <SelectContent>
+                <SelectItem value="casual">Casual</SelectItem>
+                <SelectItem value="academic">Academic</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <button onClick={onClose}>
-          Close
-        </button>
-      </div>
-    </div>
+          {/* ACTIONS */}
+          <div className="flex flex-col gap-2 pt-2">
+            <Button variant="destructive" onClick={onReset}>
+              End chat
+            </Button>
+
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
