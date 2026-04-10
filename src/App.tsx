@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+
 import ChatWindow from "./components/ChatWindow";
 import ChatInput from "./components/ChatInput";
 import "./App.css";
@@ -16,9 +17,9 @@ function App() {
   async function sendMessage(input: string) {
     if (!input.trim()) return;
 
-    const updatedMessages = [
+    const updatedMessages: Message[] = [
       ...messages,
-      { role: "user" as const, content: input },
+      { role: "user", content: input },
     ];
 
     setMessages(updatedMessages);
@@ -31,19 +32,19 @@ function App() {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant" as const, content: res },
+        { role: "assistant", content: res },
       ]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
         {
-          role: "assistant" as const,
+          role: "assistant",
           content: "Error: " + String(err),
         },
       ]);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   return (
@@ -51,6 +52,7 @@ function App() {
       <h1>Luma</h1>
 
       <ChatWindow messages={messages} />
+
       <ChatInput onSend={sendMessage} loading={loading} />
     </main>
   );

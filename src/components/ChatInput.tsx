@@ -1,32 +1,34 @@
 import { useState } from "react";
 
 interface Props {
-  onSend: (message: string) => void;
+  onSend: (input: string) => void;
   loading: boolean;
 }
 
 export default function ChatInput({ onSend, loading }: Props) {
   const [input, setInput] = useState("");
 
-  function handleSend() {
-    if (!input.trim()) return;
-
-    onSend(input);
-    setInput("");
-  }
-
   return (
     <div className="input-row">
       <input
         value={input}
-        onChange={(e) => setInput(e.currentTarget.value)}
-        placeholder="Talk to Luma..."
+        onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") handleSend();
+          if (e.key === "Enter") {
+            onSend(input);
+            setInput("");
+          }
         }}
+        placeholder="Talk to Luma..."
       />
 
-      <button onClick={handleSend} disabled={loading}>
+      <button
+        onClick={() => {
+          onSend(input);
+          setInput("");
+        }}
+        disabled={loading}
+      >
         {loading ? "Thinking..." : "Send"}
       </button>
     </div>
