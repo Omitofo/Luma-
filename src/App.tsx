@@ -4,94 +4,61 @@ import { listen } from "@tauri-apps/api/event";
 
 import ChatWindow from "./components/chat/ChatWindow";
 import ChatInput from "./components/chat/ChatInput";
+import Onboarding from "./components/Onboarding";
+import Settings from "./components/Settings";
 
-import LearnerSetupModal from "./components/tutor/LearnerSetupModal";
-import TutorModeSelector from "./components/tutor/TutorModeSelector";
-import ConfirmDialog from "./components/tutor/ConfirmDialog";
+import { Message } from "./types/chat";
+import { LearnerProfile, TutorMode } from "./types/tutor";
 
 import "./App.css";
 
-export type TutorMode = "casual" | "academic";
-
-export interface LearnerProfile {
-  language: string;
-  level: string;
-  focus: string;
-}
-
-export interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+type AppState = "onboarding" | "chat";
 
 function App() {
+  const [state, setState] = useState<AppState>("onboarding");
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [learnerProfile, setLearnerProfile] =
-    useState<LearnerProfile | null>(null);
+  const [profile, setProfile] = useState<LearnerProfile | null>(null);
+  const [tutorMode, setTutorMode] = useState<TutorMode>("casual");
 
-  const [tutorMode, setTutorMode] =
-    useState<TutorMode>("casual");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const [pendingTutorMode, setPendingTutorMode] =
-    useState<TutorMode | null>(null);
+  async function startSession(data: LearnerProfile, mode: TutorMode) {
+    setProfile(data);
+    setTutorMode(mode);
+    setState("chat");
+  }
+
+  async function resetSession() {
+    setMessages([]);
+    setStreaming("");
+    setProfile(null);
+    setState("onboarding");
+  }
 
   async function sendMessage(input: string) {
-    if (!input.trim() || loading || !learnerProfile) return;
+    if (!input.trim() || loading || !profile) return;
 
     const updatedMessages: Message[] = [
       ...messages,
-      {
-        role: "user",
-        content: input,
-      },
+      { role: "user", content: input },
     ];
 
     setMessages(updatedMessages);
     setStreaming("");
     setLoading(true);
 
-    const unlistenToken = await listen<string>(
-      "token",
-      (event) => {
-        setStreaming((prev) => prev + event.payload);
-      }
-    );
+    const unlistenToken = await listen<string>("token", (event) => {
+      setStreaming((prev) => prev + event.payload);
+    });
 
-    const unlistenEnd = await listen<string>(
-      "token_end",
-      (event) => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: event.payload,
-          },
-        ]);
-
-        setStreaming("");
-        setLoading(false);
-
-        unlistenToken();
-        unlistenEnd();
-      }
-    );
-
-    try {
-      await invoke("chat", {
-        messages: updatedMessages,
-        tutorMode,
-        learnerProfile,
-      });
-    } catch (err) {
+    const unlistenEnd = await listen<string>("token_end", (event) => {
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Error: " + String(err),
-        },
+        { role: "assistant", content: event.payload },
       ]);
 
       setStreaming("");
@@ -99,53 +66,52 @@ function App() {
 
       unlistenToken();
       unlistenEnd();
+    });
+
+    try {
+      await invoke("chat", {
+        messages: updatedMessages,
+        tutorMode,
+        learnerProfile: profile,
+      });
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Error: " + String(err) },
+      ]);
+
+      setStreaming("");
+      setLoading(false);
     }
   }
 
-  function requestTutorModeChange(mode: TutorMode) {
-    if (mode === tutorMode) return;
-
-    setPendingTutorMode(mode);
+  // ======================
+  // ONBOARDING SCREEN
+  // ======================
+  if (state === "onboarding") {
+    return (
+      <Onboarding
+        onStart={startSession}
+      />
+    );
   }
 
-  function confirmTutorModeChange() {
-    if (!pendingTutorMode) return;
-
-    setTutorMode(pendingTutorMode);
-    setPendingTutorMode(null);
-
-    setMessages([]);
-    setStreaming("");
-  }
-
-  function cancelTutorModeChange() {
-    setPendingTutorMode(null);
-  }
-
+  // ======================
+  // CHAT SCREEN
+  // ======================
   return (
     <main className="container">
-      {!learnerProfile && (
-        <LearnerSetupModal
-          onComplete={setLearnerProfile}
-        />
-      )}
-
-      <ConfirmDialog
-        open={pendingTutorMode !== null}
-        title="Change Tutor Mode?"
-        message="Changing tutor mode will clear the current chat and start a new tutoring session."
-        onConfirm={confirmTutorModeChange}
-        onCancel={cancelTutorModeChange}
-      />
-
-      <header className="top-bar">
+      {/* HEADER */}
+      <div className="top-bar">
         <h1>Luma</h1>
 
-        <TutorModeSelector
-          value={tutorMode}
-          onChange={requestTutorModeChange}
-        />
-      </header>
+        <button
+          className="settings-btn"
+          onClick={() => setSettingsOpen(true)}
+        >
+          ⚙️
+        </button>
+      </div>
 
       <ChatWindow
         messages={messages}
@@ -156,6 +122,15 @@ function App() {
         onSend={sendMessage}
         loading={loading}
       />
+
+      {settingsOpen && (
+        <Settings
+          tutorMode={tutorMode}
+          setTutorMode={setTutorMode}
+          onClose={() => setSettingsOpen(false)}
+          onReset={resetSession}
+        />
+      )}
     </main>
   );
 }
