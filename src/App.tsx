@@ -16,20 +16,30 @@ function App() {
   async function sendMessage(input: string) {
     if (!input.trim()) return;
 
-    setMessages((prev) => [...prev, { role: "user", content: input }]);
+    const updatedMessages = [
+      ...messages,
+      { role: "user" as const, content: input },
+    ];
+
+    setMessages(updatedMessages);
     setLoading(true);
 
     try {
-      const res = await invoke<string>("chat", { message: input });
+      const res = await invoke<string>("chat", {
+        messages: updatedMessages,
+      });
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: res },
+        { role: "assistant" as const, content: res },
       ]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Error: " + String(err) },
+        {
+          role: "assistant" as const,
+          content: "Error: " + String(err),
+        },
       ]);
     }
 
@@ -41,7 +51,6 @@ function App() {
       <h1>Luma</h1>
 
       <ChatWindow messages={messages} />
-
       <ChatInput onSend={sendMessage} loading={loading} />
     </main>
   );

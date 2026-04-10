@@ -1,17 +1,34 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-
 use reqwest::blocking::Client;
-use serde_json::json;
-use serde_json::Value;
+use serde::Deserialize;
+use serde_json::{json, Value};
+
+#[derive(Deserialize)]
+pub struct ChatMessage {
+    role: String,
+    content: String,
+}
 
 #[tauri::command]
-fn chat(message: String) -> String {
+fn chat(messages: Vec<ChatMessage>) -> String {
     let client = Client::new();
 
-    let prompt = format!(
-        "You are Luma, a language tutor. Be helpful, clear and natural.\nUser: {}\nAssistant:",
-        message
+    let mut prompt = String::from(
+        "You are Luma, a helpful language tutor.\n"
     );
+
+    for msg in messages {
+        match msg.role.as_str() {
+            "user" => {
+                prompt.push_str(&format!("User: {}\n", msg.content));
+            }
+            "assistant" => {
+                prompt.push_str(&format!("Assistant: {}\n", msg.content));
+            }
+            _ => {}
+        }
+    }
+
+    prompt.push_str("Assistant:");
 
     let res = client
         .post("http://localhost:8080/completion")
@@ -25,15 +42,11 @@ fn chat(message: String) -> String {
 
     match res {
         Ok(response) => {
-            let json_result: Result<Value, _> = response.json();
-
-            match json_result {
-                Ok(data) => {
-                    data["content"]
-                        .as_str()
-                        .unwrap_or("No response from model")
-                        .to_string()
-                }
+            match response.json::<Value>() {
+                Ok(data) => data["content"]
+                    .as_str()
+                    .unwrap_or("No response")
+                    .to_string(),
                 Err(e) => format!("JSON parse error: {}", e),
             }
         }
@@ -45,7 +58,7 @@ fn chat(message: String) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![chat])
+        .invoke_handler(tauri::generate_handler![chat]) // IMPORTANT FIX
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
