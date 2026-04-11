@@ -11,7 +11,7 @@ function formatMessage(text: string) {
   if (!text) return null;
 
   return text
-    .split("\n\n") // section separation
+    .split("\n\n")
     .map((block, i) => (
       <div key={i} className="mb-4 space-y-1">
         {block.split("\n").map((line, j) => (
@@ -51,7 +51,7 @@ export default function ChatWindow({
             </h2>
             <p className="text-muted-foreground text-sm">
               Start practicing with your AI tutor. Ask questions,
-              practice conversation, or request grammar explanations.
+              practice conversation, or learn step by step.
             </p>
           </div>
         </div>
