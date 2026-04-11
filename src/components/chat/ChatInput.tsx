@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
 interface Props {
   onSend: (input: string) => void;
@@ -8,29 +10,33 @@ interface Props {
 export default function ChatInput({ onSend, loading }: Props) {
   const [input, setInput] = useState("");
 
+  function send() {
+    if (!input.trim()) return;
+    onSend(input);
+    setInput("");
+  }
+
   return (
-    <div className="input-row">
-      <input
+    <div className="border-t p-3 flex gap-2 bg-background">
+
+      <Input
         value={input}
         onChange={(e) => setInput(e.target.value)}
+        placeholder="Message Luma..."
+        disabled={loading}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            onSend(input);
-            setInput("");
-          }
+          if (e.key === "Enter") send();
         }}
-        placeholder="Talk to Luma..."
+        className="h-11"
       />
 
-      <button
-        onClick={() => {
-          onSend(input);
-          setInput("");
-        }}
+      <Button
+        onClick={send}
         disabled={loading}
+        className="h-11 px-5"
       >
-        {loading ? "Thinking..." : "Send"}
-      </button>
+        {loading ? "..." : "Send"}
+      </Button>
     </div>
   );
 }

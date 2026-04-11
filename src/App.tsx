@@ -24,6 +24,9 @@ function App() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // -----------------------------
+  // SESSION START
+  // -----------------------------
   function startSession(data: LearnerProfile) {
     setProfile(data);
     setMessages([]);
@@ -31,6 +34,9 @@ function App() {
     setState("chat");
   }
 
+  // -----------------------------
+  // RESET SESSION
+  // -----------------------------
   function resetSession() {
     setMessages([]);
     setStreaming("");
@@ -39,27 +45,34 @@ function App() {
     setSettingsOpen(false);
   }
 
+  // -----------------------------
+  // SEND MESSAGE
+  // -----------------------------
   async function sendMessage(input: string) {
     if (!input.trim() || loading || !profile) return;
 
-    const updatedMessages: Message[] = [
-      ...messages,
-      { role: "user", content: input },
-    ];
+    const userMessage: Message = {
+      role: "user",
+      content: input,
+    };
+
+    const updatedMessages: Message[] = [...messages, userMessage];
 
     setMessages(updatedMessages);
     setStreaming("");
     setLoading(true);
 
-    const unlistenToken = await listen<string>("token", (event) => {
-      setStreaming((prev) => prev + event.payload);
+    const unlistenToken = await listen<string>("token", (e) => {
+      setStreaming((prev) => prev + e.payload);
     });
 
-    const unlistenEnd = await listen<string>("token_end", (event) => {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: event.payload },
-      ]);
+    const unlistenEnd = await listen<string>("token_end", (e) => {
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: e.payload,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
 
       setStreaming("");
       setLoading(false);
@@ -75,46 +88,66 @@ function App() {
         learnerProfile: profile,
       });
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Error: " + String(err) },
-      ]);
+      const errorMessage: Message = {
+        role: "assistant",
+        content: "Error: " + String(err),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
 
       setStreaming("");
       setLoading(false);
+
+      unlistenToken();
+      unlistenEnd();
     }
   }
 
+  // -----------------------------
+  // UI: ONBOARDING
+  // -----------------------------
   if (state === "onboarding") {
     return <Onboarding onComplete={startSession} />;
   }
 
+  // -----------------------------
+  // UI: CHAT
+  // -----------------------------
   return (
-    <main className="h-screen flex flex-col">
+    <main className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+
       {/* TOP BAR */}
       <div className="flex justify-between items-center p-3 border-b">
         <h1 className="font-bold">Luma</h1>
 
-        <button onClick={() => setSettingsOpen(true)}>
+        <button
+          className="text-sm opacity-70 hover:opacity-100"
+          onClick={() => setSettingsOpen(true)}
+        >
           ⚙️
         </button>
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        <ChatWindow messages={messages} streaming={streaming} />
-      </div>
+      {/* CHAT */}
+<div className="flex-1 overflow-hidden">
+  <ChatWindow
+    messages={messages}
+    streaming={streaming}
+    loading={loading}
+  />
+</div>
 
+      {/* INPUT */}
       <ChatInput onSend={sendMessage} loading={loading} />
 
-      {settingsOpen && (
-        <Settings
-  open={settingsOpen}
-  tutorMode={tutorMode}
-  setTutorMode={setTutorMode}
-  onClose={() => setSettingsOpen(false)}
-  onReset={resetSession}
-/>
-      )}
+      {/* SETTINGS MODAL */}
+      <Settings
+        open={settingsOpen}
+        tutorMode={tutorMode}
+        setTutorMode={setTutorMode}
+        onClose={() => setSettingsOpen(false)}
+        onReset={resetSession}
+      />
     </main>
   );
 }

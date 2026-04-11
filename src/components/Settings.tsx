@@ -34,35 +34,54 @@ export default function Settings({
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md border-border bg-card text-card-foreground">
         <DialogHeader>
-          <DialogTitle>Settings</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">
+            Settings
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* TUTOR MODE */}
+        <div className="space-y-6">
+          {/* Tutor Mode */}
           <div className="space-y-2">
-            <Label>Tutor Mode</Label>
+            <Label className="text-sm text-muted-foreground">
+              Tutor Mode
+            </Label>
 
-            <Select value={tutorMode} onValueChange={setTutorMode}>
-              <SelectTrigger>
+            <Select
+              value={tutorMode}
+              onValueChange={(value) => setTutorMode(value as TutorMode)}
+            >
+              <SelectTrigger className="bg-background border-border">
                 <SelectValue placeholder="Select mode" />
               </SelectTrigger>
 
-              <SelectContent>
+              <SelectContent className="bg-popover border-border z-[100]">
                 <SelectItem value="casual">Casual</SelectItem>
                 <SelectItem value="academic">Academic</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* ACTIONS */}
-          <div className="flex flex-col gap-2 pt-2">
-            <Button variant="destructive" onClick={onReset}>
-              End chat
+          {/* Danger Zone */}
+          <div className="space-y-3 border-t border-border pt-4">
+            <p className="text-sm text-muted-foreground">
+              Reset current conversation and return to onboarding.
+            </p>
+
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={onReset}
+            >
+              End Chat
             </Button>
 
-            <Button variant="outline" onClick={onClose}>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={onClose}
+            >
               Close
             </Button>
           </div>
