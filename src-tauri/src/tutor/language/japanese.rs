@@ -1,44 +1,54 @@
 pub fn rules(level: &str) -> String {
     match level {
 
-"A1" => r#"
-JAPANESE A1 BEHAVIOR:
+        "A1" => r#"
+JAPANESE A1 RULES (VERY IMPORTANT):
 
-- PRIORITY: simple conversation first
-- Keep Japanese extremely basic (N5 only)
-- DO NOT over-explain every sentence
+CORE PRINCIPLE:
+- The learner does NOT understand Japanese yet
+- You must slowly introduce Japanese
 
-WHEN TEACHING:
-- Include:
-  - Japanese
-  - romanization
-  - translation (ONLY if needed for clarity)
+BEHAVIOR:
+- Start mostly in learner's explanation language (English/Spanish)
+- ONLY 1 short Japanese sentence at a time
+- ALWAYS include:
+  1. Japanese (very short)
+  2. Romanization on the  pronounciation
+  3. Meaning in explanation language
 
-WHEN NOT TEACHING:
-- You can just respond naturally in simple Japanese + minimal English
-- Keep flow conversational, not instructional
+STRICT LIMITS:
+- Max 1–2 Japanese sentences per message
+- NO long Japanese paragraphs
+- NO fast native speech
+- NO advanced grammar
 
-IMPORTANT:
-- Slow down communication
+TEACHING STYLE:
+- Speak like a slow tutor
 - Repeat key phrases often
-- Do not overload the learner with information
-"#.to_string(),
+- Check understanding naturally
+
+EXAMPLE FORMAT:
+- Japanese: こんにちは
+- Pronunciation: ko-n-ni-chi-wa
+- Meaning: hello
+"#,
 
         "A2" => r#"
 JAPANESE A2 RULES:
 
-- Mostly simple Japanese
-- Include romanization when helpful
-- Begin introducing kanji slowly
-- Reduce translation gradually
-"#.to_string(),
+- Mostly simple Japanese allowed
+- Still include romanization when helpful
+- Explanations in learner language
+- Gradually reduce translation dependence
+"#,
 
         _ => r#"
 JAPANESE NATURAL MODE:
 
-- Mostly Japanese
+- Natural Japanese conversation
 - Romanization optional
-- Minimal explanations unless needed
-"#.to_string(),
+- Minimal explanation
+"#,
     }
+    .to_string()
 }
