@@ -37,21 +37,24 @@ export default function Onboarding({ onComplete }: Props) {
 
   return (
     <div className="h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-xl border border-border rounded-2xl">
+      <Card className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl">
         <CardHeader>
-          <CardTitle>Start learning</CardTitle>
+          <CardTitle className="text-2xl font-semibold">
+            Start learning
+          </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-5">
           {/* LANGUAGE */}
           <div className="space-y-2">
             <Label>Language</Label>
+
             <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-background border-border">
                 <SelectValue placeholder="Select language" />
               </SelectTrigger>
 
-              <SelectContent>
+              <SelectContent className="z-[100] border border-border bg-popover text-popover-foreground shadow-xl">
                 <SelectItem value="english">English</SelectItem>
                 <SelectItem value="spanish">Spanish</SelectItem>
                 <SelectItem value="french">French</SelectItem>
@@ -64,31 +67,36 @@ export default function Onboarding({ onComplete }: Props) {
           {/* LEVEL */}
           <div className="space-y-2">
             <Label>Level</Label>
+
             <Select value={level} onValueChange={setLevel}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-background border-border">
                 <SelectValue placeholder="Select level" />
               </SelectTrigger>
 
-              <SelectContent>
+              <SelectContent className="z-[100] border border-border bg-popover text-popover-foreground shadow-xl">
                 <SelectItem value="A1">A1 - Beginner</SelectItem>
                 <SelectItem value="A2">A2 - Elementary</SelectItem>
                 <SelectItem value="B1">B1 - Intermediate</SelectItem>
-                <SelectItem value="B2">B2 - Upper intermediate</SelectItem>
+                <SelectItem value="B2">B2 - Upper Intermediate</SelectItem>
                 <SelectItem value="C1">C1 - Advanced</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* FOCUS (optional but recommended) */}
+          {/* FOCUS */}
           <div className="space-y-2">
             <Label>
-              Focus <span className="text-muted-foreground">(optional)</span>
+              Focus{" "}
+              <span className="text-muted-foreground">
+                (optional)
+              </span>
             </Label>
 
             <Input
               value={focus}
               onChange={(e) => setFocus(e.target.value)}
-              placeholder="e.g. conversation, grammar, travel, exam prep"
+              placeholder="conversation, grammar, travel..."
+              className="bg-background border-border"
             />
           </div>
 

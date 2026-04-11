@@ -34,7 +34,7 @@ export default function Settings({
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md border-border bg-card text-card-foreground">
+      <DialogContent className="sm:max-w-md border border-border bg-card text-card-foreground shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             Settings
@@ -50,13 +50,15 @@ export default function Settings({
 
             <Select
               value={tutorMode}
-              onValueChange={(value) => setTutorMode(value as TutorMode)}
+              onValueChange={(value) =>
+                setTutorMode(value as TutorMode)
+              }
             >
               <SelectTrigger className="bg-background border-border">
                 <SelectValue placeholder="Select mode" />
               </SelectTrigger>
 
-              <SelectContent className="bg-popover border-border z-[100]">
+              <SelectContent className="z-[100] border border-border bg-popover text-popover-foreground shadow-xl">
                 <SelectItem value="casual">Casual</SelectItem>
                 <SelectItem value="academic">Academic</SelectItem>
               </SelectContent>

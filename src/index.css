@@ -6,9 +6,8 @@
 
 @layer base {
   :root {
-      isolation: isolate;
-
     color-scheme: dark;
+    isolation: isolate;
 
     --background: 0 0% 3%;
     --foreground: 0 0% 98%;
@@ -39,26 +38,19 @@
   }
 
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground;
-  }
-
-  html {
-    @apply font-sans;
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    @apply bg-background text-foreground font-sans;
   }
 }
 
-/* Radix overlays FIX */
-[data-radix-popper-content-wrapper],
-[data-radix-dialog-content],
-[data-radix-select-content] {
+/* Radix Portal Layer Fix */
+[data-radix-popper-content-wrapper] {
   z-index: 9999 !important;
-}
-
-/* Dialog overlay */
-[data-radix-dialog-overlay] {
-  z-index: 9998 !important;
 }
