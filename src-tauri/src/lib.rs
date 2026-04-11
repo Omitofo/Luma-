@@ -5,17 +5,22 @@ use std::io::{BufRead, BufReader};
 use tauri::Emitter;
 
 mod tutor;
+mod memory;
 
-#[derive(Deserialize)]
+use tutor::prompt::build_system_prompt;
+
+#[derive(Deserialize, Clone)]
 pub struct ChatMessage {
-    role: String,
-    content: String,
+    pub role: String,
+    pub content: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct LearnerProfile {
-    language: String,
-    level: String,
+    pub language: String,
+    pub level: String,
+    pub focus: Option<String>,
+    pub explanation_language: String,
 }
 
 #[tauri::command]
@@ -23,18 +28,22 @@ fn chat(
     app: tauri::AppHandle,
     messages: Vec<ChatMessage>,
     tutor_mode: String,
-    learner_profile: LearnerProfile, // ✅ ADD THIS
+    learner_profile: LearnerProfile,
 ) {
     let client = Client::new();
 
-    // 👇 ENHANCED SYSTEM PROMPT (minimal injection, no architecture break)
-    let base_prompt = tutor::get_prompt(&tutor_mode);
+    // TEMP MEMORY (Phase 2.3 later will replace this)
+    let memory_items = vec![
+        "prefers short explanations".to_string(),
+        "beginner learner".to_string(),
+    ];
 
-    let system_prompt = format!(
-        "{}\nLanguage: {}\nLevel: {}",
-        base_prompt,
-        learner_profile.language,
-        learner_profile.level
+    let memory = memory::format_memory(memory_items);
+
+    let system_prompt = build_system_prompt(
+        &tutor_mode,
+        &learner_profile,
+        &memory,
     );
 
     let mut prompt = format!(
@@ -43,17 +52,15 @@ fn chat(
     );
 
     for msg in messages {
-        if msg.role == "user" {
-            prompt.push_str(&format!(
-                "<|im_start|>user\n{}<|im_end|>\n",
-                msg.content
-            ));
-        } else {
-            prompt.push_str(&format!(
-                "<|im_start|>assistant\n{}<|im_end|>\n",
-                msg.content
-            ));
-        }
+let role = match msg.role.as_str() {
+    "user" => "user",
+    _ => "assistant",
+};
+        prompt.push_str(&format!(
+            "<|im_start|>{}\n{}<|im_end|>\n",
+            role,
+            msg.content
+        ));
     }
 
     prompt.push_str("<|im_start|>assistant\n");
@@ -62,8 +69,8 @@ fn chat(
         .post("http://localhost:8080/completion")
         .json(&json!({
             "prompt": prompt,
-            "n_predict": 200,
-            "temperature": 0.7,
+            "n_predict": 300,
+            "temperature": 0.4,
             "stop": ["<|im_end|>"],
             "stream": true
         }))
@@ -72,7 +79,7 @@ fn chat(
     match res {
         Ok(response) => {
             let reader = BufReader::new(response);
-            let mut full_response = String::new();
+            let mut full = String::new();
 
             for line in reader.lines().flatten() {
                 if !line.starts_with("data: ") {
@@ -85,17 +92,15 @@ fn chat(
                     break;
                 }
 
-                if let Ok(data) =
-                    serde_json::from_str::<serde_json::Value>(json_part)
-                {
+                if let Ok(data) = serde_json::from_str::<serde_json::Value>(json_part) {
                     if let Some(token) = data["content"].as_str() {
-                        full_response.push_str(token);
+                        full.push_str(token);
                         let _ = app.emit("token", token);
                     }
                 }
             }
 
-            let _ = app.emit("token_end", full_response);
+            let _ = app.emit("token_end", full);
         }
 
         Err(e) => {
@@ -110,5 +115,5 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![chat])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running app");
 }

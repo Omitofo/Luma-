@@ -7,6 +7,28 @@ interface Props {
   loading: boolean;
 }
 
+function formatMessage(text: string) {
+  // Split by double line breaks first (sections)
+  const blocks = text.split("\n\n");
+
+  return blocks.map((block, i) => {
+    const lines = block.split("\n");
+
+    return (
+      <div key={i} className="mb-3">
+        {lines.map((line, j) => (
+          <p
+            key={j}
+            className="leading-relaxed text-sm mb-1 whitespace-pre-wrap"
+          >
+            {line}
+          </p>
+        ))}
+      </div>
+    );
+  });
+}
+
 export default function ChatWindow({
   messages,
   streaming,
@@ -21,7 +43,8 @@ export default function ChatWindow({
   }, [messages, streaming]);
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-6 space-y-4 scrollbar-thin scrollbar-thumb-muted">
+    <div className="h-full overflow-y-auto px-6 py-6 space-y-6 scrollbar-thin scrollbar-thumb-muted">
+      
       {/* EMPTY STATE */}
       {messages.length === 0 && !streaming && !loading && (
         <div className="h-full flex items-center justify-center text-center">
@@ -29,11 +52,9 @@ export default function ChatWindow({
             <h2 className="text-2xl font-semibold">
               Welcome to Luma
             </h2>
-
             <p className="text-muted-foreground text-sm">
-              Start practicing with your AI tutor.
-              Ask questions, practice conversation,
-              or request grammar explanations.
+              Start practicing with your AI tutor. Ask questions,
+              practice conversation, or request grammar explanations.
             </p>
           </div>
         </div>
@@ -44,28 +65,26 @@ export default function ChatWindow({
         <div
           key={i}
           className={`flex ${
-            msg.role === "user"
-              ? "justify-end"
-              : "justify-start"
+            msg.role === "user" ? "justify-end" : "justify-start"
           }`}
         >
           <div
-            className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+            className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm shadow-sm border ${
               msg.role === "user"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card border border-border"
+                ? "bg-primary text-primary-foreground border-transparent"
+                : "bg-card border-border text-foreground"
             }`}
           >
-            {msg.content}
+            {formatMessage(msg.content)}
           </div>
         </div>
       ))}
 
-      {/* STREAMING MESSAGE */}
+      {/* STREAMING */}
       {streaming && (
         <div className="flex justify-start">
-          <div className="max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed bg-card border border-border">
-            {streaming}
+          <div className="max-w-[75%] rounded-2xl px-4 py-3 text-sm border bg-card border-border">
+            {formatMessage(streaming)}
           </div>
         </div>
       )}
