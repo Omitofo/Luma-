@@ -70,7 +70,7 @@ let role = match msg.role.as_str() {
         .json(&json!({
             "prompt": prompt,
             "n_predict": 300,
-            "temperature": 0.4,
+            "temperature": 0.5,
             "stop": ["<|im_end|>"],
             "stream": true
         }))

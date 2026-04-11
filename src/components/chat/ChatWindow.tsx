@@ -8,25 +8,22 @@ interface Props {
 }
 
 function formatMessage(text: string) {
-  // Split by double line breaks first (sections)
-  const blocks = text.split("\n\n");
+  if (!text) return null;
 
-  return blocks.map((block, i) => {
-    const lines = block.split("\n");
-
-    return (
-      <div key={i} className="mb-3">
-        {lines.map((line, j) => (
+  return text
+    .split("\n\n") // section separation
+    .map((block, i) => (
+      <div key={i} className="mb-4 space-y-1">
+        {block.split("\n").map((line, j) => (
           <p
             key={j}
-            className="leading-relaxed text-sm mb-1 whitespace-pre-wrap"
+            className="text-sm leading-relaxed whitespace-pre-wrap"
           >
             {line}
           </p>
         ))}
       </div>
-    );
-  });
+    ));
 }
 
 export default function ChatWindow({
@@ -44,7 +41,7 @@ export default function ChatWindow({
 
   return (
     <div className="h-full overflow-y-auto px-6 py-6 space-y-6 scrollbar-thin scrollbar-thumb-muted">
-      
+
       {/* EMPTY STATE */}
       {messages.length === 0 && !streaming && !loading && (
         <div className="h-full flex items-center justify-center text-center">
@@ -69,7 +66,7 @@ export default function ChatWindow({
           }`}
         >
           <div
-            className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm shadow-sm border ${
+            className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm border space-y-2 ${
               msg.role === "user"
                 ? "bg-primary text-primary-foreground border-transparent"
                 : "bg-card border-border text-foreground"
@@ -83,7 +80,7 @@ export default function ChatWindow({
       {/* STREAMING */}
       {streaming && (
         <div className="flex justify-start">
-          <div className="max-w-[75%] rounded-2xl px-4 py-3 text-sm border bg-card border-border">
+          <div className="max-w-[75%] rounded-2xl px-4 py-3 text-sm border bg-card border-border space-y-2">
             {formatMessage(streaming)}
           </div>
         </div>

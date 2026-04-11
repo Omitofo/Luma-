@@ -1,36 +1,36 @@
 pub fn rules(level: &str) -> String {
     match level {
-        "A1" | "A2" => r#"
-JAPANESE BEGINNER RULES:
 
-- Always output in this structure:
+        "A1" => r#"
+JAPANESE A1 RULES:
+
+- Use ONLY simple N5 grammar
+- Always include:
   1. Japanese sentence
-  2. Romaji
-  3. Translation (English or Spanish)
-  4. Very simple explanation (in learner language)
+  2. Romanization (VERY IMPORTANT)
+  3. Meaning in explanation language
 
-- Use ONLY N5 grammar
-- Avoid complex kanji
 - Keep sentences short
 - Repeat key vocabulary
-"#,
+- Avoid kanji unless essential
+- Focus on survival Japanese (greetings, basic actions)
+"#.to_string(),
 
-        "B1" | "B2" => r#"
-JAPANESE INTERMEDIATE RULES:
+        "A2" => r#"
+JAPANESE A2 RULES:
 
-- Japanese first
-- Romaji optional
-- Translation only when needed
-- Slightly more natural speech
-"#,
+- Mostly simple Japanese
+- Include romanization when helpful
+- Begin introducing kanji slowly
+- Reduce translation gradually
+"#.to_string(),
 
         _ => r#"
-JAPANESE ADVANCED:
+JAPANESE NATURAL MODE:
 
-- Mostly natural Japanese
-- Minimal explanations
-- No romaji unless requested
-"#,
+- Mostly Japanese
+- Romanization optional
+- Minimal explanations unless needed
+"#.to_string(),
     }
-    .to_string()
 }
