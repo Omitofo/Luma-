@@ -1,4 +1,5 @@
 @import "@fontsource-variable/geist";
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,50 +8,137 @@
 @layer base {
   :root {
     color-scheme: dark;
-    isolation: isolate;
 
-    --background: 0 0% 3%;
-    --foreground: 0 0% 98%;
+    /* Core palette */
+    --bg:        #080a0f;
+    --bg-2:      #0d1018;
+    --bg-3:      #131720;
+    --border:    rgba(255,255,255,0.07);
+    --border-2:  rgba(255,255,255,0.12);
 
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 98%;
+    /* Text */
+    --text-1:    #f0f2f8;
+    --text-2:    #8b90a0;
+    --text-3:    #555b6e;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 98%;
+    /* Accents */
+    --blue:      #3b82f6;
+    --blue-dim:  rgba(59,130,246,0.12);
+    --violet:    #8b5cf6;
+    --violet-dim:rgba(139,92,246,0.12);
+    --emerald:   #10b981;
+    --emerald-dim:rgba(16,185,129,0.12);
+    --amber:     #f59e0b;
 
-    --primary: 217 91% 60%;
+    /* Shadcn compat */
+    --background:      0 0% 3%;
+    --foreground:      220 20% 94%;
+    --card:            220 15% 8%;
+    --card-foreground: 220 20% 94%;
+    --popover:         220 15% 8%;
+    --popover-foreground: 220 20% 94%;
+    --primary:         217 91% 60%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 65%;
-
-    --accent: 0 0% 14%;
-    --accent-foreground: 0 0% 98%;
-
-    --border: 0 0% 14%;
-    --input: 0 0% 14%;
-    --ring: 217 91% 60%;
-
-    --radius: 0.75rem;
+    --secondary:       220 15% 12%;
+    --secondary-foreground: 220 20% 80%;
+    --muted:           220 15% 12%;
+    --muted-foreground:220 10% 50%;
+    --accent:          220 15% 14%;
+    --accent-foreground: 220 20% 94%;
+    --destructive:     0 72% 51%;
+    --border:          220 15% 12%;
+    --input:           220 15% 12%;
+    --ring:            217 91% 60%;
+    --radius:          0.75rem;
   }
 
   * {
-    @apply border-border;
+    @apply border-[rgba(255,255,255,0.07)];
+    box-sizing: border-box;
   }
 
-  html,
-  body,
-  #root {
+  html, body, #root {
     height: 100%;
     margin: 0;
-    @apply bg-background text-foreground font-sans;
+    background: var(--bg);
+    color: var(--text-1);
+    font-family: 'Geist Variable', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+}
+
+@layer utilities {
+  .font-serif { font-family: 'Instrument Serif', serif; }
+
+  .glass {
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .glow-blue  { box-shadow: 0 0 24px rgba(59,130,246,0.15); }
+  .glow-violet { box-shadow: 0 0 24px rgba(139,92,246,0.15); }
+  .glow-emerald { box-shadow: 0 0 24px rgba(16,185,129,0.15); }
+
+  .text-gradient-blue {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease both;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.25s ease both;
+  }
+
+  .card-flip {
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-flip.flipped {
+    transform: rotateY(180deg);
+  }
+
+  .card-face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .card-back {
+    transform: rotateY(180deg);
   }
 }
 
-/* Radix Portal Layer Fix */
-[data-radix-popper-content-wrapper] {
-  z-index: 9999 !important;
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Radix portal z-index fix */
+[data-radix-popper-content-wrapper] { z-index: 9999 !important; }

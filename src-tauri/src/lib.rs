@@ -1,112 +1,27 @@
-use reqwest::blocking::Client;
-use serde::Deserialize;
-use serde_json::json;
-use std::io::{BufRead, BufReader};
-use tauri::Emitter;
+mod llm;
 
-mod tutor;
-mod memory;
+use llm::{ChatMessage, build_prompt, stream_completion};
 
-use tutor::prompt::build_system_prompt;
-
-#[derive(Deserialize, Clone)]
-pub struct ChatMessage {
-    pub role: String,
-    pub content: String,
-}
-
-#[derive(Deserialize, Clone)]
-pub struct LearnerProfile {
-    pub language: String,
-    pub level: String,
-    pub focus: Option<String>,
-    pub explanation_language: String,
-}
-
+/// Core Tauri command: accepts a messages array (system/user/assistant),
+/// builds the ChatML prompt, and streams tokens back via Tauri events.
 #[tauri::command]
 fn chat(
     app: tauri::AppHandle,
     messages: Vec<ChatMessage>,
-    tutor_mode: String,
-    learner_profile: LearnerProfile,
+    max_tokens: Option<u32>,
+    temperature: Option<f32>,
 ) {
-    let client = Client::new();
+    let tokens = max_tokens.unwrap_or(512).min(2048);
+    let temp = temperature.unwrap_or(0.4).clamp(0.0, 2.0);
 
-    // TEMP MEMORY (Phase 2.3 later will replace this)
-    let memory_items = vec![
-        "prefers short explanations".to_string(),
-        "beginner learner".to_string(),
-    ];
+    let prompt = build_prompt(&messages);
 
-    let memory = memory::format_memory(memory_items);
-
-    let system_prompt = build_system_prompt(
-        &tutor_mode,
-        &learner_profile,
-        &memory,
-    );
-
-    let mut prompt = format!(
-        "<|im_start|>system\n{}<|im_end|>\n",
-        system_prompt
-    );
-
-    for msg in messages {
-let role = match msg.role.as_str() {
-    "user" => "user",
-    _ => "assistant",
-};
-        prompt.push_str(&format!(
-            "<|im_start|>{}\n{}<|im_end|>\n",
-            role,
-            msg.content
-        ));
-    }
-
-    prompt.push_str("<|im_start|>assistant\n");
-
-    let res = client
-        .post("http://localhost:8080/completion")
-        .json(&json!({
-            "prompt": prompt,
-            "n_predict": 300,
-            "temperature": 0.5,
-            "stop": ["<|im_end|>"],
-            "stream": true
-        }))
-        .send();
-
-    match res {
-        Ok(response) => {
-            let reader = BufReader::new(response);
-            let mut full = String::new();
-
-            for line in reader.lines().flatten() {
-                if !line.starts_with("data: ") {
-                    continue;
-                }
-
-                let json_part = line.trim_start_matches("data: ").trim();
-
-                if json_part == "[DONE]" {
-                    break;
-                }
-
-                if let Ok(data) = serde_json::from_str::<serde_json::Value>(json_part) {
-                    if let Some(token) = data["content"].as_str() {
-                        full.push_str(token);
-                        let _ = app.emit("token", token);
-                    }
-                }
-            }
-
-            let _ = app.emit("token_end", full);
-        }
-
-        Err(e) => {
+    // Run in a spawned thread to avoid blocking the Tauri event loop
+    std::thread::spawn(move || {
+        if let Err(e) = stream_completion(&app, prompt, tokens, temp) {
             let _ = app.emit("token_end", format!("Error: {}", e));
         }
-    }
+    });
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -115,5 +30,5 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![chat])
         .run(tauri::generate_context!())
-        .expect("error while running app");
+        .expect("error while running Tauri application");
 }
