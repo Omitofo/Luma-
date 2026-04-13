@@ -1,9 +1,14 @@
 mod llm;
 
+// ── IMPORTANT: Emitter trait must be in scope for app.emit() to work ──────────
+use tauri::Emitter;
 use llm::{ChatMessage, build_prompt, stream_completion};
 
-/// Core Tauri command: accepts a messages array (system/user/assistant),
-/// builds the ChatML prompt, and streams tokens back via Tauri events.
+/// Main Tauri command.
+/// Receives a messages array (system / user / assistant roles),
+/// builds the ChatML prompt, and streams tokens back via Tauri events:
+///   - "token"     → each partial chunk (string)
+///   - "token_end" → full completed response (string)
 #[tauri::command]
 fn chat(
     app: tauri::AppHandle,
@@ -12,13 +17,14 @@ fn chat(
     temperature: Option<f32>,
 ) {
     let tokens = max_tokens.unwrap_or(512).min(2048);
-    let temp = temperature.unwrap_or(0.4).clamp(0.0, 2.0);
+    let temp = temperature.unwrap_or(0.4_f32).clamp(0.0, 2.0);
 
     let prompt = build_prompt(&messages);
 
-    // Run in a spawned thread to avoid blocking the Tauri event loop
+    // Spawn a background thread so the Tauri event loop is never blocked
     std::thread::spawn(move || {
         if let Err(e) = stream_completion(&app, prompt, tokens, temp) {
+            // Emit the error as the final token_end so the frontend unblocks
             let _ = app.emit("token_end", format!("Error: {}", e));
         }
     });

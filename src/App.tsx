@@ -14,7 +14,6 @@ export default function App() {
   const { profile, hasProfile, setProfile } = useLearnerStore();
   const [screen, setScreen] = useState<Screen>("home");
 
-  // First launch — show setup
   if (!hasProfile) {
     return (
       <SetupScreen
@@ -27,30 +26,15 @@ export default function App() {
   }
 
   if (screen === "anki") {
-    return (
-      <AnkiGame
-        profile={profile!}
-        onEnd={() => setScreen("home")}
-      />
-    );
+    return <AnkiGame profile={profile!} onEnd={() => setScreen("home")} />;
   }
 
   if (screen === "phrase-builder") {
-    return (
-      <PhraseBuilderGame
-        profile={profile!}
-        onEnd={() => setScreen("home")}
-      />
-    );
+    return <PhraseBuilderGame profile={profile!} onEnd={() => setScreen("home")} />;
   }
 
   if (screen === "scenario") {
-    return (
-      <ScenarioGame
-        profile={profile!}
-        onEnd={() => setScreen("home")}
-      />
-    );
+    return <ScenarioGame profile={profile!} onEnd={() => setScreen("home")} />;
   }
 
   return (

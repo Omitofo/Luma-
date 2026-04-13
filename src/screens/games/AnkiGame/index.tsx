@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { LearnerProfile } from "../../../types/learner";
 import type { AnkiCard } from "../../../types/llm";
 import { useLlm } from "../../../hooks/useLlm";
@@ -22,6 +22,7 @@ export function AnkiGame({ profile, onEnd }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [topic, setTopic] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const startedRef = useRef(false);
 
   const { generate, isLoading } = useLlm();
 
@@ -52,7 +53,7 @@ export function AnkiGame({ profile, onEnd }: Props) {
         setCurrentIndex(0);
         setPhase("playing");
       } catch {
-        setError("Failed to generate cards. Is llama.cpp running?");
+        setError("Failed to generate cards. Is llama.cpp running on port 8080?");
       }
     },
     [generate, profile]
@@ -75,17 +76,18 @@ export function AnkiGame({ profile, onEnd }: Props) {
     setCards([]);
     setCurrentIndex(0);
     setError(null);
+    startedRef.current = false;
   }
 
   return (
     <GameShell title="Flash Cards" icon="🃏" onEnd={onEnd}>
       {phase === "input" && (
-        <>
+        <div className="h-full flex flex-col">
           <TopicInput onStart={handleStart} isLoading={isLoading} />
           {error && (
-            <p className="text-center text-xs text-red-400 pb-4">{error}</p>
+            <p className="text-center text-xs text-red-400 pb-4 px-6">{error}</p>
           )}
-        </>
+        </div>
       )}
 
       {phase === "playing" && cards.length > 0 && (

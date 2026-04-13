@@ -1,11 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { LearnerProfile } from "../../../types/learner";
 import type { PhraseChallenge } from "../../../types/llm";
 import { useLlm } from "../../../hooks/useLlm";
 import { buildPhraseBuilderPrompt } from "../../../lib/prompts/phraseBuilder";
 import { parseLlmJson, shuffle } from "../../../lib/utils";
 import { GameShell } from "../../../components/layout/GameShell";
-import { PhraseDisplay, ChoiceButtons } from "./PhraseDisplay";
+import { PhraseDisplay } from "./PhraseDisplay";
+import { ChoiceButtons } from "./ChoiceButtons";
 
 interface Props {
   profile: LearnerProfile;
@@ -39,41 +40,35 @@ export function PhraseBuilderGame({ profile, onEnd }: Props) {
 
       const parsed = parseLlmJson<PhraseChallenge>(raw);
 
-      if (!parsed || !parsed.sentence || !parsed.missingWord || !parsed.choices) {
-        setError("Could not generate challenge. Trying again…");
+      if (!parsed?.sentence || !parsed?.missingWord || !Array.isArray(parsed?.choices)) {
+        setError("Could not generate a challenge. Trying again…");
         return;
       }
 
-      // Ensure choices are shuffled and include the correct word
       const safeChoices = parsed.choices.includes(parsed.missingWord)
         ? parsed.choices
         : [...parsed.choices.slice(0, 3), parsed.missingWord];
 
       setChallenge({ ...parsed, choices: shuffle(safeChoices) });
     } catch {
-      setError("Failed to connect to AI. Is llama.cpp running?");
+      setError("Failed to connect to AI. Is llama.cpp running on port 8080?");
     }
   }, [generate, profile]);
 
-  // Load first challenge on mount
-  const [started, setStarted] = useState(false);
-  if (!started) {
-    setStarted(true);
+  // Fetch first challenge on mount
+  useEffect(() => {
     fetchChallenge();
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSelect(choice: string) {
-    if (revealed) return;
+    if (revealed || !challenge) return;
     setSelectedAnswer(choice);
     setRevealed(true);
     setScore((s) => ({
-      correct: s.correct + (choice === challenge?.missingWord ? 1 : 0),
+      correct: s.correct + (choice === challenge.missingWord ? 1 : 0),
       total: s.total + 1,
     }));
-  }
-
-  function handleNext() {
-    fetchChallenge();
   }
 
   return (
@@ -90,13 +85,15 @@ export function PhraseBuilderGame({ profile, onEnd }: Props) {
       }
     >
       <div className="h-full flex flex-col items-center justify-center p-6">
+        {/* Loading state — no challenge yet */}
         {isLoading && !challenge && (
           <div className="flex flex-col items-center gap-3 animate-fade-in">
-            <span className="text-3xl animate-spin">⟳</span>
+            <span className="text-3xl animate-spin inline-block">⟳</span>
             <p className="text-sm text-[var(--text-2)]">Generating challenge…</p>
           </div>
         )}
 
+        {/* Error state */}
         {error && (
           <div className="text-center">
             <p className="text-sm text-red-400 mb-4">{error}</p>
@@ -109,14 +106,13 @@ export function PhraseBuilderGame({ profile, onEnd }: Props) {
           </div>
         )}
 
+        {/* Challenge */}
         {challenge && !isLoading && (
           <div className="w-full max-w-sm flex flex-col gap-5 animate-fade-up">
-            {/* Instruction */}
             <p className="text-xs text-[var(--text-3)] text-center uppercase tracking-widest">
               Choose the missing word
             </p>
 
-            {/* Phrase */}
             <PhraseDisplay
               displaySentence={challenge.displaySentence}
               translation={challenge.translation}
@@ -125,7 +121,6 @@ export function PhraseBuilderGame({ profile, onEnd }: Props) {
               revealed={revealed}
             />
 
-            {/* Choices */}
             <ChoiceButtons
               choices={challenge.choices}
               correctAnswer={challenge.missingWord}
@@ -148,7 +143,7 @@ export function PhraseBuilderGame({ profile, onEnd }: Props) {
                   )}
                 </p>
                 <button
-                  onClick={handleNext}
+                  onClick={fetchChallenge}
                   disabled={isLoading}
                   className="w-full py-3 rounded-xl bg-violet-500 hover:bg-violet-400 disabled:opacity-50 text-white text-sm font-semibold transition-colors"
                 >

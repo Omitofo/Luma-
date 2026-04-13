@@ -61,7 +61,8 @@ export function TopicInput({ onStart, isLoading }: Props) {
         {/* Card count */}
         <div className="mb-6">
           <label className="block text-xs font-medium text-[var(--text-3)] uppercase tracking-widest mb-2">
-            Number of cards: <span className="text-[var(--text-1)]">{count}</span>
+            Number of cards:{" "}
+            <span className="text-[var(--text-1)]">{count}</span>
           </label>
           <input
             type="range"
@@ -84,7 +85,7 @@ export function TopicInput({ onStart, isLoading }: Props) {
         >
           {isLoading ? (
             <>
-              <span className="animate-spin text-base">⟳</span>
+              <span className="animate-spin inline-block">⟳</span>
               Generating cards…
             </>
           ) : (

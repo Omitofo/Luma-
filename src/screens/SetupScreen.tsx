@@ -150,7 +150,7 @@ export function SetupScreen({ onComplete }: Props) {
           </div>
         )}
 
-        {/* Step indicator */}
+        {/* Step dots */}
         <div className="flex justify-center gap-1.5 mt-6">
           {[1, 2, 3].map((s) => (
             <div

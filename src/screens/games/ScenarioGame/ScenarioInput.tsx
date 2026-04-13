@@ -5,7 +5,7 @@ interface Props {
   isLoading: boolean;
 }
 
-const EXAMPLE_SCENARIOS = [
+const EXAMPLES = [
   "Ordering coffee at a café in Tokyo",
   "Asking for directions in Paris",
   "Shopping at a street market",
@@ -36,11 +36,10 @@ export function ScenarioInput({ onGenerate, isLoading }: Props) {
           className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 transition-all resize-none mb-4"
         />
 
-        {/* Suggestions */}
         <div className="mb-6">
           <p className="text-xs text-[var(--text-3)] mb-2">Try one of these:</p>
           <div className="space-y-1.5">
-            {EXAMPLE_SCENARIOS.map((s) => (
+            {EXAMPLES.map((s) => (
               <button
                 key={s}
                 onClick={() => setText(s)}
@@ -59,7 +58,7 @@ export function ScenarioInput({ onGenerate, isLoading }: Props) {
         >
           {isLoading ? (
             <>
-              <span className="animate-spin text-base">⟳</span>
+              <span className="animate-spin inline-block">⟳</span>
               Writing dialogue…
             </>
           ) : (

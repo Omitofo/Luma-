@@ -12,9 +12,9 @@ interface Props {
 
 export function CardView({ card, index, total, onNext, onPrev }: Props) {
   const [flipped, setFlipped] = useState(false);
+  const [lastIndex, setLastIndex] = useState(index);
 
   // Reset flip when card changes
-  const [lastIndex, setLastIndex] = useState(index);
   if (lastIndex !== index) {
     setFlipped(false);
     setLastIndex(index);
@@ -22,7 +22,7 @@ export function CardView({ card, index, total, onNext, onPrev }: Props) {
 
   return (
     <div className="h-full flex flex-col items-center justify-center p-6 animate-fade-in">
-      {/* Progress */}
+      {/* Progress bar */}
       <div className="w-full max-w-sm mb-6 flex items-center gap-3">
         <div className="flex-1 h-1 bg-white/[0.07] rounded-full overflow-hidden">
           <div
@@ -77,14 +77,13 @@ export function CardView({ card, index, total, onNext, onPrev }: Props) {
         </div>
       </div>
 
-      {/* Hint */}
       {!flipped && (
         <p className="text-xs text-[var(--text-3)] mt-4 animate-fade-in">
           Tap the card to see the answer
         </p>
       )}
 
-      {/* Navigation */}
+      {/* Navigation — only show after flip */}
       {flipped && (
         <div className="flex gap-3 mt-6 w-full max-w-sm animate-fade-up">
           <button

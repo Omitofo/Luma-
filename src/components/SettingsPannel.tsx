@@ -1,9 +1,7 @@
-// edit language/level config
-
 import { useState } from "react";
 import type { LearnerProfile, Language, Level, ExplanationLanguage } from "../types/learner";
-import { LANGUAGES, LEVELS, EXPLANATION_LANGUAGES } from "../config/languages";
 import { ROMANIZATION_LANGUAGES } from "../types/learner";
+import { LANGUAGES, LEVELS, EXPLANATION_LANGUAGES } from "../config/languages";
 import { cn } from "../lib/utils";
 
 interface Props {
@@ -16,11 +14,10 @@ export function SettingsPanel({ profile, onSave, onClose }: Props) {
   const [draft, setDraft] = useState<LearnerProfile>(profile);
 
   function handleSave() {
-    const updated: LearnerProfile = {
+    onSave({
       ...draft,
       showRomanization: ROMANIZATION_LANGUAGES.includes(draft.language),
-    };
-    onSave(updated);
+    });
     onClose();
   }
 
@@ -38,7 +35,7 @@ export function SettingsPanel({ profile, onSave, onClose }: Props) {
           Learning Settings
         </h2>
 
-        {/* Language selection */}
+        {/* Language */}
         <label className="block text-xs font-medium text-[var(--text-3)] uppercase tracking-widest mb-2">
           Language
         </label>
@@ -62,7 +59,7 @@ export function SettingsPanel({ profile, onSave, onClose }: Props) {
           ))}
         </div>
 
-        {/* Level selection */}
+        {/* Level */}
         <label className="block text-xs font-medium text-[var(--text-3)] uppercase tracking-widest mb-2">
           Level
         </label>
