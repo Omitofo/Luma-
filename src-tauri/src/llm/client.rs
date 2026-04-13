@@ -4,6 +4,8 @@ use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::io::{BufRead, BufReader};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use tauri::Emitter;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -30,12 +32,16 @@ pub fn build_prompt(messages: &[ChatMessage]) -> String {
 }
 
 /// Calls the llama.cpp /completion endpoint with streaming SSE.
-/// Emits "token" events for each chunk and "token_end" with the full response.
+///
+/// - Emits "token" for each text chunk.
+/// - Emits "token_end" with the full accumulated response when done.
+/// - Checks `cancel` on every token; stops cleanly when set to `true`.
 pub fn stream_completion(
     app: &tauri::AppHandle,
     prompt: String,
     max_tokens: u32,
     temperature: f32,
+    cancel: Arc<AtomicBool>,
 ) -> Result<(), String> {
     let client = Client::builder()
         .timeout(std::time::Duration::from_secs(120))
@@ -48,16 +54,28 @@ pub fn stream_completion(
             "prompt": prompt,
             "n_predict": max_tokens,
             "temperature": temperature,
-            "stop": ["<|im_end|>"],
+            // Stop tokens for common model families
+            "stop": ["<|im_end|>", "<|endoftext|>", "</s>", "[/INST]"],
             "stream": true
         }))
         .send()
-        .map_err(|e| format!("Connection error: {}. Is llama.cpp running on port 8080?", e))?;
+        .map_err(|e| {
+            format!(
+                "Connection error: {}. Is llama.cpp running on port 8080?",
+                e
+            )
+        })?;
 
     let reader = BufReader::new(res);
     let mut full = String::new();
 
     for line in reader.lines().flatten() {
+        // Honour cancellation between tokens
+        if cancel.load(Ordering::SeqCst) {
+            let _ = app.emit("token_end", &full);
+            return Ok(());
+        }
+
         if !line.starts_with("data: ") {
             continue;
         }
@@ -70,17 +88,19 @@ pub fn stream_completion(
 
         if let Ok(data) = serde_json::from_str::<serde_json::Value>(json_part) {
             if let Some(token) = data["content"].as_str() {
-                full.push_str(token);
-                let _ = app.emit("token", token);
+                if !token.is_empty() {
+                    full.push_str(token);
+                    let _ = app.emit("token", token);
+                }
             }
 
-            // llama.cpp signals completion with stop = true
+            // llama.cpp sets stop:true on the final chunk
             if data["stop"].as_bool().unwrap_or(false) {
                 break;
             }
         }
     }
 
-    let _ = app.emit("token_end", full);
+    let _ = app.emit("token_end", &full);
     Ok(())
 }
