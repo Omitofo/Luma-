@@ -1,3 +1,4 @@
+//src/llm/mod.rs
 pub mod client;
 pub mod stream;
 
