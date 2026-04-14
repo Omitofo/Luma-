@@ -1,11 +1,11 @@
-import { cn } from "../../../lib/utils";
+import type { PhraseChoice } from "../../../types/llm";
 
 interface Props {
-  choices: string[];
+  choices: PhraseChoice[];
   correctAnswer: string;
   selectedAnswer: string | null;
   revealed: boolean;
-  onSelect: (choice: string) => void;
+  onSelect: (choice: PhraseChoice) => void;
 }
 
 export function ChoiceButtons({
@@ -17,37 +17,36 @@ export function ChoiceButtons({
 }: Props) {
   return (
     <div className="grid grid-cols-2 gap-2 w-full max-w-sm mx-auto">
-      {choices.map((choice) => {
-        const isSelected = selectedAnswer === choice;
-        const isCorrect = choice === correctAnswer;
+
+      {choices.map((choice, i) => {
+        const isSelected = selectedAnswer === choice.text;
+        const isCorrect = choice.text === correctAnswer;
 
         let style =
-          "border-white/[0.07] bg-white/[0.03] text-[var(--text-2)] hover:bg-white/[0.07] hover:text-[var(--text-1)]";
+          "border-white/[0.07] bg-white/[0.03] text-[var(--text-2)]";
 
         if (revealed) {
           if (isCorrect) {
             style = "border-emerald-500/50 bg-emerald-500/10 text-emerald-400";
-          } else if (isSelected && !isCorrect) {
+          } else if (isSelected) {
             style = "border-red-500/50 bg-red-500/10 text-red-400";
-          } else {
-            style = "border-white/[0.07] bg-white/[0.02] text-[var(--text-3)] opacity-40";
           }
         }
 
         return (
           <button
-            key={choice}
+            key={i}
             onClick={() => !revealed && onSelect(choice)}
-            disabled={revealed}
-            className={cn(
-              "py-3 px-4 rounded-xl border text-sm font-medium transition-all duration-200 disabled:cursor-default",
-              style
-            )}
+            className={`p-3 rounded-xl border ${style}`}
           >
-            {choice}
+            <div className="text-lg">{choice.text}</div>
+            <div className="text-xs opacity-60">
+              {choice.romanization || ""}
+            </div>
           </button>
         );
       })}
+
     </div>
   );
 }

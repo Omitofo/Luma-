@@ -1,33 +1,46 @@
-//lib/prompts/phraseBuilder.ts
-
 import type { LearnerProfile } from "../../types/learner";
 
-/**
- * Builds the prompt for generating phrase-builder challenges.
- * Returns a JSON object with one challenge at a time.
- */
 export function buildPhraseBuilderPrompt(profile: LearnerProfile) {
   const { language, level, explanationLanguage } = profile;
 
-  const system = `You are a language learning assistant generating fill-in-the-blank grammar exercises.
-You MUST respond ONLY with a valid JSON object. No explanation, no markdown, no prose.
-The JSON format is:
-{
-  "sentence": "<complete sentence in ${language}>",
-  "displaySentence": "<same sentence with the missing word replaced by ____>",
-  "missingWord": "<the correct missing word>",
-  "choices": ["<correct word>", "<wrong1>", "<wrong2>", "<wrong3>"],
-  "translation": "<full sentence translation in ${explanationLanguage}>"
-}
-Rules:
-- Remove exactly ONE word from the sentence to create the blank.
-- Choose a word that tests grammar or vocabulary relevant to level ${level}.
-- The 3 wrong choices must be plausible but clearly incorrect in context.
-- Shuffle the choices array so the correct answer is not always first.
-- Adjust complexity strictly for CEFR level ${level}.`;
+  const system = `You are a strict Japanese language exercise generator.
 
-  const user = `Generate one fill-in-the-blank sentence in ${language} at level ${level}.
-Return ONLY the JSON object.`;
+YOU MUST ALWAYS INCLUDE ROMANIZATION.
+
+OUTPUT RULES:
+- Return ONLY valid JSON
+- No markdown, no explanation
+
+FORMAT:
+{
+  "sentence": "...",
+  "displaySentence": "...",
+  "missingWord": "...",
+  "choices": ["...", "...", "...", "..."],
+  "translation": "...",
+  "romanization": "..."
+}
+
+RULES:
+- sentence MUST be natural Japanese
+- displaySentence MUST replace ONE meaningful word with "____"
+- missingWord MUST be exactly the removed word
+- romanization MUST be full sentence in romaji
+- choices MUST be 4 items (1 correct + 3 wrong same part of speech)
+- NEVER place blank at sentence end
+- Remove only ONE grammatical unit (noun, verb, particle, auxiliary)
+
+LEVEL: CEFR ${level}
+LANGUAGE: ${language}
+TRANSLATION LANGUAGE: ${explanationLanguage}
+`;
+
+  const user = `Generate ONE Japanese sentence.
+
+IMPORTANT:
+- blank MUST replace a real word inside sentence
+- DO NOT place blank at end
+- return ONLY JSON`;
 
   return { system, user };
 }
