@@ -1,27 +1,18 @@
-/**
- * PhraseBuilderGame — silent retry UX.
- *
- * Key behaviour:
- * - Retries up to MAX_ATTEMPTS times without showing error UI.
- * - Only shows an error if ALL attempts fail.
- * - Loading spinner stays on during retries — user sees "thinking…" not errors.
- * - choices are plain strings.
- */
-
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { LearnerProfile } from "../../../types/learner";
 import {
   buildPhraseBuilderPrompt,
   validatePhraseChallenge,
+  normaliseChoices,
 } from "../../../lib/prompts/phraseBuilder";
-import type { PhraseChallenge } from "../../../lib/prompts/phraseBuilder";
+import type { PhraseChallenge, PhraseChoice } from "../../../lib/prompts/phraseBuilder";
 import { useLlm } from "../../../hooks/useLlm";
 import { parseLlmJson, shuffle } from "../../../lib/utils";
 import { GameShell } from "../../../components/layout/GameShell";
 import { PhraseDisplay } from "./PhraseDisplay";
 import { ChoiceButtons } from "./ChoiceButtons";
 
-const MAX_ATTEMPTS = 4; // silent retry limit before showing error
+const MAX_ATTEMPTS = 5;
 
 interface Props {
   profile: LearnerProfile;
@@ -34,8 +25,7 @@ export function PhraseBuilderGame({ profile, onEnd }: Props) {
   const [revealed, setRevealed] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
-  const [shuffledChoices, setShuffledChoices] = useState<string[]>([]);
-  const attemptRef = useRef(0);
+  const [shuffledChoices, setShuffledChoices] = useState<PhraseChoice[]>([]);
 
   const { generate, isLoading } = useLlm();
 
@@ -45,68 +35,58 @@ export function PhraseBuilderGame({ profile, onEnd }: Props) {
     setRevealed(false);
     setChallenge(null);
     setShuffledChoices([]);
-    attemptRef.current = 0;
 
     const { system, user } = buildPhraseBuilderPrompt(profile);
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      attemptRef.current = attempt;
       console.log(`[PHRASE] attempt ${attempt}/${MAX_ATTEMPTS}`);
 
       try {
         const raw = await generate(
-          [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ],
-          400
+          [{ role: "system", content: system }, { role: "user", content: user }],
+          450
         );
 
-        console.log(`[PHRASE] raw response (attempt ${attempt}):`, raw);
-
-        const parsed = parseLlmJson<PhraseChallenge>(raw);
+        console.log(`[PHRASE] raw (attempt ${attempt}):`, raw);
+        const parsed = parseLlmJson<any>(raw);
         console.log(`[PHRASE] parsed (attempt ${attempt}):`, parsed);
 
         if (parsed && validatePhraseChallenge(parsed, attempt)) {
-          // Normalise choices to plain strings
-          const rawChoices: string[] = parsed.choices.map((c: any) =>
-            typeof c === "string" ? c : (c.text ?? String(c))
+          const choices = normaliseChoices(
+            parsed.choices,
+            parsed.missingWord,
+            profile.showRomanization
           );
 
-          // Ensure correct answer is present
-          const withCorrect = rawChoices.includes(parsed.missingWord)
-            ? rawChoices
-            : [parsed.missingWord, ...rawChoices.slice(0, 3)];
-
-          setChallenge(parsed);
-          setShuffledChoices(shuffle(withCorrect));
-          return; // success — stop retrying
+          setChallenge({
+            sentence: parsed.sentence,
+            displaySentence: parsed.displaySentence,
+            missingWord: parsed.missingWord,
+            choices,
+            translation: parsed.translation,
+            romanization: parsed.romanization,
+          });
+          setShuffledChoices(shuffle(choices));
+          return; // success
         }
-
-        // Validation failed — loop will retry silently
       } catch (err: any) {
         if (err?.message === "cancelled") return;
-        console.error(`[PHRASE] attempt ${attempt} threw:`, err);
-        // Continue retrying unless it's a cancellation
+        console.error(`[PHRASE] attempt ${attempt} error:`, err);
       }
     }
 
-    // All attempts exhausted
     console.error("[PHRASE] all attempts failed");
-    setError("Could not generate a valid exercise. Make sure llama.cpp is running and try again.");
+    setError("Could not generate a valid exercise. Check that llama.cpp is running.");
   }, [generate, profile]);
 
-  useEffect(() => {
-    fetchChallenge();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { fetchChallenge(); }, []); // eslint-disable-line
 
-  function handleSelect(choice: string) {
+  function handleSelect(choiceText: string) {
     if (revealed || !challenge) return;
-    setSelectedAnswer(choice);
+    setSelectedAnswer(choiceText);
     setRevealed(true);
     setScore((s) => ({
-      correct: s.correct + (choice === challenge.missingWord ? 1 : 0),
+      correct: s.correct + (choiceText === challenge.missingWord ? 1 : 0),
       total: s.total + 1,
     }));
   }
@@ -116,17 +96,14 @@ export function PhraseBuilderGame({ profile, onEnd }: Props) {
       title="Phrase Builder"
       icon="🧩"
       onEnd={onEnd}
-      rightSlot={
-        score.total > 0 ? (
-          <span className="text-xs text-[var(--text-3)] tabular-nums">
-            {score.correct}/{score.total}
-          </span>
-        ) : undefined
-      }
+      rightSlot={score.total > 0 ? (
+        <span className="text-xs text-[var(--text-3)] tabular-nums">
+          {score.correct}/{score.total}
+        </span>
+      ) : undefined}
     >
       <div className="h-full flex flex-col items-center justify-center p-6">
-
-        {/* Loading — shown during initial load AND silent retries */}
+        {/* Loading spinner — shown during generation AND silent retries */}
         {isLoading && !challenge && (
           <div className="flex flex-col items-center gap-3 animate-fade-in">
             <div className="w-8 h-8 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
@@ -134,7 +111,7 @@ export function PhraseBuilderGame({ profile, onEnd }: Props) {
           </div>
         )}
 
-        {/* Terminal error only if all retries fail */}
+        {/* Error — only if all retries failed */}
         {error && !isLoading && (
           <div className="text-center max-w-xs">
             <p className="text-sm text-red-400 mb-4">{error}</p>
@@ -147,7 +124,7 @@ export function PhraseBuilderGame({ profile, onEnd }: Props) {
           </div>
         )}
 
-        {/* Challenge ready */}
+        {/* Challenge */}
         {challenge && !isLoading && (
           <div className="w-full max-w-sm flex flex-col gap-5 animate-fade-up">
             <p className="text-xs text-[var(--text-3)] text-center uppercase tracking-widest">

@@ -1,11 +1,14 @@
 /**
- * Anki Flash Card prompt.
+ * Anki Flash Card prompt — v3
  *
- * Contract:
- *   front        → word/phrase IN the target language (e.g. "旅行", "voyager")
- *   back         → translation in the learner's explanation language (e.g. "travel")
- *   romanization → only for Japanese/Mandarin/Korean
- *   example      → one short sentence IN the target language
+ * Fixes from logs:
+ * - Example sentences were mixing Spanish words into French ("avión", "pasaporte")
+ * - Model sometimes ignored the target language for "front"
+ *
+ * Key changes:
+ * - Explicit: example sentence must contain ONLY target-language words
+ * - Shorter, cleaner prompt — less rope for the model to hang itself with
+ * - Language label injected into EVERY field description
  */
 
 import type { LearnerProfile } from "../../types/learner";
@@ -14,7 +17,7 @@ export interface AnkiCard {
   front: string;          // target-language word/phrase
   back: string;           // explanation-language translation
   romanization?: string;  // pronunciation (Japanese/Mandarin/Korean only)
-  example?: string;       // example sentence in target language
+  example?: string;       // example sentence in target language (no loanwords)
 }
 
 export function buildAnkiPrompt(
@@ -27,26 +30,39 @@ export function buildAnkiPrompt(
   const langLabel = LANGUAGE_LABELS[language] ?? language;
   const expLabel  = EXPLANATION_LABELS[explanationLanguage] ?? explanationLanguage;
 
-  const romanLine = showRomanization
-    ? `    "romanization": "<pronunciation guide>",`
+  const romanField = showRomanization
+    ? `"romanization":"<${langLabel} pronunciation>",`
     : "";
 
-  // Simpler, shorter prompt — less confusion for the model
   return {
     system: `You generate bilingual vocabulary flash cards as a JSON array.
-Return ONLY the JSON array. No explanation, no markdown.
+Return ONLY the JSON array. No prose, no markdown, no code fences.
 
-Format:
-[{"front":"<${langLabel} word>","back":"<${expLabel} translation>",${romanLine ? `"romanization":"<pronunciation>",` : ""}"example":"<sentence in ${langLabel}>"}]
+Array format:
+[{"front":"<${langLabel} word>","back":"<${expLabel} translation>",${romanField}"example":"<short sentence in ${langLabel} only — no ${expLabel} words>"}]
 
 Rules:
-- "front" = the ${langLabel} word
-- "back" = the ${expLabel} translation
+- "front" = one ${langLabel} word or short phrase
+- "back" = its ${expLabel} translation
+- "example" = a short sentence written ONLY in ${langLabel} (no mixed languages)
 - Level: CEFR ${level}
-- Return exactly ${count} items`,
+- Return exactly ${count} objects`,
 
-    user: `${count} flash cards about "${topic}". Language: ${langLabel}. Translate to: ${expLabel}.`,
+    user: `Topic: "${topic}". Language: ${langLabel}. Translation: ${expLabel}. Level: ${level}. Count: ${count}.`,
   };
+}
+
+export function validateAnkiCard(card: Partial<AnkiCard>, index: number): card is AnkiCard {
+  if (!card.front?.trim()) {
+    console.warn(`[ANKI] card[${index}] rejected: missing front`, card);
+    return false;
+  }
+  if (!card.back?.trim()) {
+    console.warn(`[ANKI] card[${index}] rejected: missing back`, card);
+    return false;
+  }
+  console.log(`[ANKI] card[${index}] ✓ | front: "${card.front}" | back: "${card.back}"`);
+  return true;
 }
 
 // ─── label maps ──────────────────────────────────────────────────────────────
@@ -67,21 +83,3 @@ const EXPLANATION_LABELS: Record<string, string> = {
   spanish: "Spanish",
   french:  "French",
 };
-
-/**
- * Loose validation — only structural checks.
- * Loanwords (hotel/hotel, baggage/baggage) are valid — the model puts the
- * target-language word on front and the translation on back.
- * We log rejections so we can tune from the terminal.
- */
-export function validateAnkiCard(card: Partial<AnkiCard>, index: number): card is AnkiCard {
-  if (!card.front || typeof card.front !== "string" || !card.front.trim()) {
-    console.warn(`[ANKI] card[${index}] rejected: missing "front"`, card);
-    return false;
-  }
-  if (!card.back || typeof card.back !== "string" || !card.back.trim()) {
-    console.warn(`[ANKI] card[${index}] rejected: missing "back"`, card);
-    return false;
-  }
-  return true;
-}

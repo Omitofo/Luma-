@@ -17,6 +17,16 @@ const EXAMPLES = [
 export function ScenarioInput({ onGenerate, isLoading }: Props) {
   const [text, setText] = useState("");
 
+  // Loading state — full-panel spinner
+  if (isLoading) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 animate-fade-in">
+        <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+        <p className="text-sm text-[var(--text-2)]">Writing dialogue…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex items-center justify-center p-6">
       <div className="w-full max-w-sm animate-fade-up">
@@ -53,17 +63,10 @@ export function ScenarioInput({ onGenerate, isLoading }: Props) {
 
         <button
           onClick={() => onGenerate(text.trim())}
-          disabled={!text.trim() || isLoading}
-          className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+          disabled={!text.trim()}
+          className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
         >
-          {isLoading ? (
-            <>
-              <span className="animate-spin inline-block">⟳</span>
-              Writing dialogue…
-            </>
-          ) : (
-            "Generate Dialogue →"
-          )}
+          Generate Dialogue →
         </button>
       </div>
     </div>

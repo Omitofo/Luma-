@@ -20,6 +20,16 @@ export function TopicInput({ onStart, isLoading }: Props) {
     onStart(t, count);
   }
 
+  // Loading state — full-panel spinner (same style as PhraseBuilder)
+  if (isLoading) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 animate-fade-in">
+        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+        <p className="text-sm text-[var(--text-2)]">Generating cards…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex items-center justify-center p-6">
       <div className="w-full max-w-sm animate-fade-up">
@@ -61,7 +71,7 @@ export function TopicInput({ onStart, isLoading }: Props) {
         {/* Card count */}
         <div className="mb-6">
           <label className="block text-xs font-medium text-[var(--text-3)] uppercase tracking-widest mb-2">
-            Number of cards:{" "}
+            Cards:{" "}
             <span className="text-[var(--text-1)]">{count}</span>
           </label>
           <input
@@ -80,17 +90,10 @@ export function TopicInput({ onStart, isLoading }: Props) {
 
         <button
           onClick={handleSubmit}
-          disabled={!topic.trim() || isLoading}
-          className="w-full py-3 rounded-xl bg-blue-500 hover:bg-blue-400 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+          disabled={!topic.trim()}
+          className="w-full py-3 rounded-xl bg-blue-500 hover:bg-blue-400 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
         >
-          {isLoading ? (
-            <>
-              <span className="animate-spin inline-block">⟳</span>
-              Generating cards…
-            </>
-          ) : (
-            "Generate Cards →"
-          )}
+          Generate Cards →
         </button>
       </div>
     </div>
