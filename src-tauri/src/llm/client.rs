@@ -1,9 +1,6 @@
-//src/llm/client.rs
-
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::io::{BufRead, BufReader};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::Emitter;
@@ -14,28 +11,26 @@ pub struct ChatMessage {
     pub content: String,
 }
 
-/// Converts an array of ChatMessages into a ChatML-formatted prompt string.
 pub fn build_prompt(messages: &[ChatMessage]) -> String {
     let mut prompt = String::new();
+
     for msg in messages {
         let role = match msg.role.as_str() {
             "system" | "user" | "assistant" => msg.role.as_str(),
             _ => "user",
         };
+
         prompt.push_str(&format!(
             "<|im_start|>{}\n{}<|im_end|>\n",
             role, msg.content
         ));
     }
+
     prompt.push_str("<|im_start|>assistant\n");
     prompt
 }
 
-/// Calls the llama.cpp /completion endpoint with streaming SSE.
-///
-/// - Emits "token" for each text chunk.
-/// - Emits "token_end" with the full accumulated response when done.
-/// - Checks `cancel` on every token; stops cleanly when set to `true`.
+/// 🚨 NEW: no streaming, just full response
 pub fn stream_completion(
     app: &tauri::AppHandle,
     prompt: String,
@@ -43,10 +38,9 @@ pub fn stream_completion(
     temperature: f32,
     cancel: Arc<AtomicBool>,
 ) -> Result<(), String> {
-    let client = Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()
-        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+    println!("[LLM] sending request...");
+
+    let client = Client::new();
 
     let res = client
         .post("http://localhost:8080/completion")
@@ -54,53 +48,33 @@ pub fn stream_completion(
             "prompt": prompt,
             "n_predict": max_tokens,
             "temperature": temperature,
-            // Stop tokens for common model families
-            "stop": ["<|im_end|>", "<|endoftext|>", "</s>", "[/INST]"],
-            "stream": true
+            "stop": ["<|im_end|>"],
+            "stream": false   // ✅ IMPORTANT CHANGE
         }))
         .send()
-        .map_err(|e| {
-            format!(
-                "Connection error: {}. Is llama.cpp running on port 8080?",
-                e
-            )
-        })?;
+        .map_err(|e| format!("Connection error: {}", e))?;
 
-    let reader = BufReader::new(res);
-    let mut full = String::new();
+    let text = res.text().map_err(|e| e.to_string())?;
 
-    for line in reader.lines().flatten() {
-        // Honour cancellation between tokens
-        if cancel.load(Ordering::SeqCst) {
-            let _ = app.emit("token_end", &full);
-            return Ok(());
-        }
+    println!("[LLM RAW RESPONSE]\n{}", text);
 
-        if !line.starts_with("data: ") {
-            continue;
-        }
-
-        let json_part = line.trim_start_matches("data: ").trim();
-
-        if json_part == "[DONE]" {
-            break;
-        }
-
-        if let Ok(data) = serde_json::from_str::<serde_json::Value>(json_part) {
-            if let Some(token) = data["content"].as_str() {
-                if !token.is_empty() {
-                    full.push_str(token);
-                    let _ = app.emit("token", token);
-                }
-            }
-
-            // llama.cpp sets stop:true on the final chunk
-            if data["stop"].as_bool().unwrap_or(false) {
-                break;
-            }
-        }
+    if cancel.load(Ordering::SeqCst) {
+        return Ok(());
     }
 
-    let _ = app.emit("token_end", &full);
+    // llama.cpp usually returns full text in:
+    let json_value: serde_json::Value =
+        serde_json::from_str(&text).unwrap_or(json!({ "content": text }));
+
+    let final_text = json_value["content"]
+        .as_str()
+        .unwrap_or(&text)
+        .to_string();
+
+    println!("[LLM FINAL TEXT]\n{}", final_text);
+
+    // 🚨 emit ONLY once
+    let _ = app.emit("token_end", final_text);
+
     Ok(())
 }

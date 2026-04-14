@@ -1,3 +1,5 @@
+//screens/games/AnkiGame/ResultsScreen.tsx
+
 interface Props {
   topic: string;
   cardCount: number;

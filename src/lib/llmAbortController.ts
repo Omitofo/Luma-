@@ -1,3 +1,4 @@
+//lib/llmAbortController.ts
 /**
  * Global LLM abort controller.
  * Only one LLM session can run at a time — cancelling before starting a new

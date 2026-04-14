@@ -1,3 +1,4 @@
+//src/types/llm.ts
 export interface LlmMessage {
   role: "user" | "assistant" | "system";
   content: string;

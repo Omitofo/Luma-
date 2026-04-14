@@ -1,3 +1,4 @@
+//src/types/game.ts
 export type GameId = "anki" | "phrase-builder" | "scenario";
 
 export type GameStatus = "idle" | "loading" | "playing" | "ended";

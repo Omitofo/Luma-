@@ -1,3 +1,4 @@
+//lib/parseLlmJson.ts
 /**
  * parseLlmJson — extracts and parses the first valid JSON value
  * (object OR array) from arbitrary LLM output.
