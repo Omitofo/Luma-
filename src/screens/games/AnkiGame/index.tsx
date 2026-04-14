@@ -1,9 +1,8 @@
-//screens/games/AnkiGame/index.tsx
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import type { LearnerProfile } from "../../../types/learner";
-import type { AnkiCard } from "../../../types/llm";
 import { useLlm } from "../../../hooks/useLlm";
-import { buildAnkiPrompt } from "../../../lib/prompts/anki";
+import { buildAnkiPrompt, validateAnkiCard } from "../../../lib/prompts/anki";
+import type { AnkiCard } from "../../../lib/prompts/anki";
 import { parseLlmJson } from "../../../lib/utils";
 import { GameShell } from "../../../components/layout/GameShell";
 import { TopicInput } from "./TopicInput";
@@ -23,7 +22,6 @@ export function AnkiGame({ profile, onEnd }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [topic, setTopic] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const startedRef = useRef(false);
 
   const { generate, isLoading } = useLlm();
 
@@ -40,32 +38,45 @@ export function AnkiGame({ profile, onEnd }: Props) {
             { role: "system", content: system },
             { role: "user", content: user },
           ],
-          600
+          700 // bump tokens — richer example sentences need more room
         );
 
-        const parsed = parseLlmJson<AnkiCard[]>(raw);
+        // Log the raw response so we can see exactly what came back
+        console.log("[ANKI] raw LLM response:", raw);
 
-        if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
-          setError("Could not parse cards. Please try again.");
+        const parsed = parseLlmJson<AnkiCard[]>(raw);
+        console.log("[ANKI] parsed:", parsed);
+
+        if (!parsed || !Array.isArray(parsed)) {
+          console.warn("[ANKI] parseLlmJson returned non-array:", parsed);
+          setError("The AI returned an unexpected format. Please try again.");
           return;
         }
 
-        setCards(parsed);
+        // Validate each card — structural only, logged inside validateAnkiCard
+        const valid = parsed.filter((card, i) => validateAnkiCard(card, i));
+        console.log(`[ANKI] ${valid.length}/${parsed.length} cards passed validation`);
+
+        if (valid.length === 0) {
+          setError("No usable cards came back. Please try again.");
+          return;
+        }
+
+        setCards(valid);
         setCurrentIndex(0);
         setPhase("playing");
-      } catch {
-        setError("Failed to generate cards. Is llama.cpp running on port 8080?");
+      } catch (err: any) {
+        if (err?.message === "cancelled") return;
+        console.error("[ANKI] error:", err);
+        setError("Could not reach the AI server. Make sure llama.cpp is running on port 8080.");
       }
     },
     [generate, profile]
   );
 
   function handleNext() {
-    if (currentIndex >= cards.length - 1) {
-      setPhase("done");
-    } else {
-      setCurrentIndex((i) => i + 1);
-    }
+    if (currentIndex >= cards.length - 1) setPhase("done");
+    else setCurrentIndex((i) => i + 1);
   }
 
   function handlePrev() {
@@ -77,7 +88,6 @@ export function AnkiGame({ profile, onEnd }: Props) {
     setCards([]);
     setCurrentIndex(0);
     setError(null);
-    startedRef.current = false;
   }
 
   return (

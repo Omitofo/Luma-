@@ -1,10 +1,22 @@
-//lib/prompts/anki.ts
+/**
+ * Anki Flash Card prompt.
+ *
+ * Contract:
+ *   front        → word/phrase IN the target language (e.g. "旅行", "voyager")
+ *   back         → translation in the learner's explanation language (e.g. "travel")
+ *   romanization → only for Japanese/Mandarin/Korean
+ *   example      → one short sentence IN the target language
+ */
+
 import type { LearnerProfile } from "../../types/learner";
 
-/**
- * Builds the system + user messages for generating Anki flash cards.
- * The model must return a strict JSON array — no prose, no markdown fences.
- */
+export interface AnkiCard {
+  front: string;          // target-language word/phrase
+  back: string;           // explanation-language translation
+  romanization?: string;  // pronunciation (Japanese/Mandarin/Korean only)
+  example?: string;       // example sentence in target language
+}
+
 export function buildAnkiPrompt(
   topic: string,
   count: number,
@@ -12,27 +24,64 @@ export function buildAnkiPrompt(
 ) {
   const { language, level, explanationLanguage, showRomanization } = profile;
 
-  const romanizationInstruction = showRomanization
-    ? `Include a "romanization" field with the pronunciation (romaji for Japanese, pinyin for Mandarin, romanization for Korean).`
-    : `Omit the "romanization" field.`;
+  const langLabel = LANGUAGE_LABELS[language] ?? language;
+  const expLabel  = EXPLANATION_LABELS[explanationLanguage] ?? explanationLanguage;
 
-  const system = `You are a language learning assistant that generates flash card data.
-You MUST respond ONLY with a valid JSON array. No explanation, no markdown, no prose.
-The JSON array format is:
-[
-  {
-    "front": "<word or short phrase in ${language}>",
-    "back": "<translation in ${explanationLanguage}>",
-    "romanization": "<pronunciation guide if applicable>",
-    "example": "<one short example sentence in ${language}>"
+  const romanLine = showRomanization
+    ? `    "romanization": "<pronunciation guide>",`
+    : "";
+
+  // Simpler, shorter prompt — less confusion for the model
+  return {
+    system: `You generate bilingual vocabulary flash cards as a JSON array.
+Return ONLY the JSON array. No explanation, no markdown.
+
+Format:
+[{"front":"<${langLabel} word>","back":"<${expLabel} translation>",${romanLine ? `"romanization":"<pronunciation>",` : ""}"example":"<sentence in ${langLabel}>"}]
+
+Rules:
+- "front" = the ${langLabel} word
+- "back" = the ${expLabel} translation
+- Level: CEFR ${level}
+- Return exactly ${count} items`,
+
+    user: `${count} flash cards about "${topic}". Language: ${langLabel}. Translate to: ${expLabel}.`,
+  };
+}
+
+// ─── label maps ──────────────────────────────────────────────────────────────
+
+const LANGUAGE_LABELS: Record<string, string> = {
+  japanese:   "Japanese",
+  spanish:    "Spanish",
+  french:     "French",
+  german:     "German",
+  italian:    "Italian",
+  portuguese: "Portuguese",
+  mandarin:   "Mandarin Chinese",
+  korean:     "Korean",
+};
+
+const EXPLANATION_LABELS: Record<string, string> = {
+  english: "English",
+  spanish: "Spanish",
+  french:  "French",
+};
+
+/**
+ * Loose validation — only structural checks.
+ * Loanwords (hotel/hotel, baggage/baggage) are valid — the model puts the
+ * target-language word on front and the translation on back.
+ * We log rejections so we can tune from the terminal.
+ */
+export function validateAnkiCard(card: Partial<AnkiCard>, index: number): card is AnkiCard {
+  if (!card.front || typeof card.front !== "string" || !card.front.trim()) {
+    console.warn(`[ANKI] card[${index}] rejected: missing "front"`, card);
+    return false;
   }
-]
-${romanizationInstruction}
-Adjust difficulty strictly for CEFR level ${level}.`;
-
-  const user = `Generate exactly ${count} flash cards about the topic: "${topic}".
-Language: ${language}. Level: ${level}. Translation language: ${explanationLanguage}.
-Return ONLY the JSON array.`;
-
-  return { system, user };
+  if (!card.back || typeof card.back !== "string" || !card.back.trim()) {
+    console.warn(`[ANKI] card[${index}] rejected: missing "back"`, card);
+    return false;
+  }
+  return true;
 }

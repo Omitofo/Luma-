@@ -1,8 +1,15 @@
+/**
+ * ScenarioGame — authentic native-speaker dialogue generator.
+ */
+
 import { useState, useCallback } from "react";
 import type { LearnerProfile } from "../../../types/learner";
-import type { ScenarioDialogue } from "../../../types/llm";
+import {
+  buildScenarioPrompt,
+  validateScenarioDialogue,
+} from "../../../lib/prompts/scenario";
+import type { ScenarioDialogue } from "../../../lib/prompts/scenario";
 import { useLlm } from "../../../hooks/useLlm";
-import { buildScenarioPrompt } from "../../../lib/prompts/scenario";
 import { parseLlmJson } from "../../../lib/utils";
 import { GameShell } from "../../../components/layout/GameShell";
 import { ScenarioInput } from "./ScenarioInput";
@@ -40,23 +47,23 @@ export function ScenarioGame({ profile, onEnd }: Props) {
 
         const parsed = parseLlmJson<ScenarioDialogue>(raw);
 
-        if (!parsed || !Array.isArray(parsed.turns) || parsed.turns.length === 0) {
-          setError("Could not parse dialogue. Please try again.");
+        if (!parsed || !validateScenarioDialogue(parsed)) {
+          setError("Could not parse the dialogue. Please try again.");
           return;
         }
 
         setDialogue(parsed);
         setCurrentScenario(scenarioText);
         setPhase("viewing");
-      } catch {
-        setError("Failed to generate dialogue. Is llama.cpp running?");
+      } catch (err: any) {
+        if (err?.message === "cancelled") return;
+        setError("Failed to generate dialogue. Make sure llama.cpp is running on port 8080.");
       }
     },
     [generate, profile]
   );
 
   async function handleNextDialogue() {
-    // Re-generate the same scenario for variety
     await generateDialogue(currentScenario);
   }
 
